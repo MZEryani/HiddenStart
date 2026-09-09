@@ -4,6 +4,7 @@ import Testing
 #if canImport(XCTest)
 import XCTest
 #endif
+import AppKit
 @testable import HiddenStart
 
 @MainActor
@@ -12,6 +13,42 @@ final class MockAppTerminator: AppTerminating {
 
     func terminate() {
         terminateCalled = true
+    }
+}
+
+@MainActor
+final class MockSettingsStore: SettingsStoring {
+    var apps: [ManagedApp] = []
+    var saveCallCount = 0
+    var loadCallCount = 0
+
+    init(apps: [ManagedApp] = []) {
+        self.apps = apps
+    }
+
+    func load() throws {
+        loadCallCount += 1
+    }
+
+    func save() throws {
+        saveCallCount += 1
+    }
+
+    func add(_ app: ManagedApp) throws {
+        apps.append(app)
+        try save()
+    }
+
+    func remove(withId id: UUID) throws {
+        apps.removeAll { $0.id == id }
+        try save()
+    }
+
+    func update(_ app: ManagedApp) throws {
+        if let index = apps.firstIndex(where: { $0.id == app.id }) {
+            apps[index] = app
+            try save()
+        }
     }
 }
 
@@ -45,34 +82,74 @@ struct StatusViewModelTests {
         viewModel.quit()
         #expect(mockTerminator.terminateCalled)
     }
-}
-#endif
 
-#if canImport(XCTest)
-@MainActor
-final class StatusViewModelXCTest: XCTestCase {
-    func testDefaultInitialization() {
-        let mockTerminator = MockAppTerminator()
-        let viewModel = StatusViewModel(terminator: mockTerminator)
+    @Test("Adding application updates managedApps and saves to store")
+    func testAddApplication() async {
+        let store = MockSettingsStore()
+        let picker = MockApplicationPicker()
+        let app = ManagedApp(name: "Discord", bundlePath: "/Applications/Discord.app", customArguments: "--start-minimized")
+        picker.appToReturn = app
 
-        XCTAssertEqual(viewModel.title, "HiddenStart")
-        XCTAssertEqual(viewModel.statusMessage, "Ready")
+        let viewModel = StatusViewModel(
+            settingsStore: store,
+            appPicker: picker
+        )
+
+        await viewModel.addApplication()
+
+        #expect(viewModel.managedApps.count == 1)
+        #expect(viewModel.managedApps.first?.name == "Discord")
+        #expect(store.apps.count == 1)
+        #expect(store.saveCallCount == 1)
     }
 
-    func testCustomStatusMessage() {
-        let mockTerminator = MockAppTerminator()
-        let viewModel = StatusViewModel(statusMessage: "3 apps queued", terminator: mockTerminator)
+    @Test("Removing application removes from store and updates managedApps")
+    func testRemoveApplication() {
+        let app = ManagedApp(name: "Steam", bundlePath: "/Applications/Steam.app")
+        let store = MockSettingsStore(apps: [app])
+        let viewModel = StatusViewModel(settingsStore: store)
 
-        XCTAssertEqual(viewModel.statusMessage, "3 apps queued")
+        #expect(viewModel.managedApps.count == 1)
+
+        viewModel.removeApplication(withId: app.id)
+
+        #expect(viewModel.managedApps.isEmpty)
+        #expect(store.apps.isEmpty)
+        #expect(store.saveCallCount == 1)
     }
 
-    func testQuitDelegatesToTerminator() {
-        let mockTerminator = MockAppTerminator()
-        let viewModel = StatusViewModel(terminator: mockTerminator)
+    @Test("Toggling app enabled state flips isEnabled and saves")
+    func testToggleAppEnabled() {
+        let app = ManagedApp(name: "Steam", bundlePath: "/Applications/Steam.app", isEnabled: true)
+        let store = MockSettingsStore(apps: [app])
+        let viewModel = StatusViewModel(settingsStore: store)
 
-        XCTAssertFalse(mockTerminator.terminateCalled)
-        viewModel.quit()
-        XCTAssertTrue(mockTerminator.terminateCalled)
+        viewModel.toggleAppEnabled(withId: app.id)
+
+        #expect(viewModel.managedApps.first?.isEnabled == false)
+        #expect(store.apps.first?.isEnabled == false)
+        #expect(store.saveCallCount == 1)
+    }
+
+    @Test("Test launch executes via workspace manager")
+    func testLaunchApp() async {
+        let workspace = MockWorkspaceManager()
+        let app = ManagedApp(
+            name: "Steam",
+            bundlePath: "/Applications/Steam.app",
+            launchHidden: true,
+            customArguments: "-silent"
+        )
+        let viewModel = StatusViewModel(workspaceManager: workspace)
+
+        await viewModel.testLaunch(app: app)
+
+        #expect(workspace.openedURLs.count == 1)
+        #expect(workspace.openedURLs.first == app.bundleURL)
+        #expect(workspace.configurations.first?.hides == true)
+        #expect(workspace.configurations.first?.activates == false)
+        #expect(workspace.configurations.first?.arguments == ["-silent"])
+        #expect(viewModel.statusMessage == "Test launch triggered for Steam")
     }
 }
 #endif
