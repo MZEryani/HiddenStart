@@ -305,7 +305,10 @@ struct LaunchCoordinatorTests {
         #expect(coordinator.networkStatus == "Waiting for network...")
 
         // Wait for offline timeout to fire
-        try await Task.sleep(for: .milliseconds(50))
+        for _ in 0..<30 {
+            if coordinator.networkStatus == "Skipped (Offline)" { break }
+            try await Task.sleep(for: .milliseconds(10))
+        }
 
         #expect(coordinator.networkStatus == "Skipped (Offline)")
         #expect(coordinator.statusSummary == "Skipped (Offline)")
@@ -341,13 +344,19 @@ struct LaunchCoordinatorTests {
         coordinator.startStartupRun(for: [app])
 
         // Wait for offline timeout to fire and skip app
-        try await Task.sleep(for: .milliseconds(50))
+        for _ in 0..<30 {
+            if coordinator.networkStatus == "Skipped (Offline)" { break }
+            try await Task.sleep(for: .milliseconds(10))
+        }
         #expect(coordinator.networkStatus == "Skipped (Offline)")
         #expect(mockSuppressor.launchedApps.isEmpty)
 
         // Now within the deferred retry window, simulate network reconnection
         mockNetwork.simulateNetworkChange(isConnected: true)
-        try await Task.sleep(for: .milliseconds(30))
+        for _ in 0..<30 {
+            if !mockSuppressor.launchedApps.isEmpty { break }
+            try await Task.sleep(for: .milliseconds(10))
+        }
 
         #expect(coordinator.networkStatus == "Network connected")
         #expect(mockSuppressor.launchedApps.count == 1)
@@ -520,4 +529,90 @@ struct LaunchCoordinatorTests {
         coordinator.cancelAll()
         #expect(mockNetwork.stopMonitoringCallCount == stopsBefore + 1)
     }
+
+    @Test("Coordinator auto-heals moved app and launches with healed path")
+    func coordinatorAutoHealsMovedApp() async throws {
+        let mockWorkspace = MockWorkspaceManager()
+        let mockSuppressor = MockWindowSuppressor()
+        let mockNetwork = MockNetworkMonitor(isConnected: true)
+
+        let movedURL = URL(fileURLWithPath: "/Applications/NewLocation/Discord.app")
+        mockWorkspace.applicationURLs["com.hnc.Discord"] = movedURL
+
+        let resolver = AppResolver(
+            workspaceManager: mockWorkspace,
+            fileExistsChecker: { path in path == "/Applications/NewLocation/Discord.app" }
+        )
+
+        let tempDir = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        let storeURL = tempDir.appendingPathComponent("apps.json")
+        let store = SettingsStore(fileURL: storeURL)
+
+        let app = ManagedApp(
+            name: "Discord",
+            bundlePath: "/Applications/OldLocation/Discord.app",
+            bundleIdentifier: "com.hnc.Discord",
+            delaySeconds: 0,
+            waitForInternet: false,
+            isEnabled: true
+        )
+        try store.add(app)
+
+        let coordinator = LaunchCoordinator(
+            workspaceManager: mockWorkspace,
+            windowSuppressor: mockSuppressor,
+            networkMonitor: mockNetwork,
+            appResolver: resolver,
+            settingsStore: store,
+            sleep: { _ in }
+        )
+
+        coordinator.startStartupRun(for: [app])
+        try await Task.sleep(for: .milliseconds(30))
+
+        #expect(mockSuppressor.launchedApps.count == 1)
+        #expect(mockSuppressor.launchedApps.first?.bundlePath == "/Applications/NewLocation/Discord.app")
+
+        // Verify store updated with healed path
+        let updatedInStore = store.apps.first { $0.id == app.id }
+        #expect(updatedInStore?.bundlePath == "/Applications/NewLocation/Discord.app")
+
+        try? FileManager.default.removeItem(at: tempDir)
+    }
+
+    @Test("Coordinator safely skips missing app without crashing")
+    func coordinatorSafelySkipsMissingApp() async throws {
+        let mockWorkspace = MockWorkspaceManager()
+        let mockSuppressor = MockWindowSuppressor()
+        let mockNetwork = MockNetworkMonitor(isConnected: true)
+
+        let resolver = AppResolver(
+            workspaceManager: mockWorkspace,
+            fileExistsChecker: { _ in false }
+        )
+
+        let app = ManagedApp(
+            name: "GhostApp",
+            bundlePath: "/Applications/GhostApp.app",
+            bundleIdentifier: "com.example.ghost",
+            delaySeconds: 0,
+            waitForInternet: false,
+            isEnabled: true
+        )
+
+        let coordinator = LaunchCoordinator(
+            workspaceManager: mockWorkspace,
+            windowSuppressor: mockSuppressor,
+            networkMonitor: mockNetwork,
+            appResolver: resolver,
+            sleep: { _ in }
+        )
+
+        coordinator.startStartupRun(for: [app])
+        try await Task.sleep(for: .milliseconds(30))
+
+        #expect(mockSuppressor.launchedApps.isEmpty)
+        #expect(coordinator.isRunning == false)
+    }
 }
+

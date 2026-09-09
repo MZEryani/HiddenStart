@@ -266,5 +266,123 @@ struct StatusViewModelTests {
         #expect(viewModel.networkStatus == "Skipped (Offline)")
         #expect(viewModel.statusMessage == "Skipped (Offline)")
     }
+
+    @Test("toggleAutoStart registers when disabled and unregisters when enabled")
+    func testToggleAutoStart() {
+        let mockAutoStart = MockAutoStartManager(isEnabled: false, status: .notRegistered)
+        let viewModel = StatusViewModel(autoStartManager: mockAutoStart)
+
+        #expect(viewModel.isAutoStartEnabled == false)
+
+        viewModel.toggleAutoStart()
+
+        #expect(mockAutoStart.toggleCalled == true)
+        #expect(viewModel.isAutoStartEnabled == true)
+        #expect(viewModel.autoStartStatus == .enabled)
+
+        viewModel.toggleAutoStart()
+
+        #expect(viewModel.isAutoStartEnabled == false)
+        #expect(viewModel.autoStartStatus == .notRegistered)
+    }
+
+    @Test("AutoStart with requiresApproval sets flag and opens settings")
+    func testAutoStartRequiresApproval() {
+        let mockAutoStart = MockAutoStartManager(
+            isEnabled: false,
+            status: .requiresApproval,
+            requiresApproval: true
+        )
+        let viewModel = StatusViewModel(autoStartManager: mockAutoStart)
+
+        #expect(viewModel.autoStartRequiresApproval == true)
+        #expect(viewModel.isAutoStartEnabled == false)
+
+        viewModel.openSystemSettingsLoginItems()
+        #expect(mockAutoStart.openSystemSettingsCalled == true)
+    }
+
+    @Test("ViewModel auto-heals moved app on load and updates store")
+    func testAutoHealingOnLoad() {
+        let movedApp = ManagedApp(
+            name: "MovedApp",
+            bundlePath: "/Applications/OldPath/App.app",
+            bundleIdentifier: "com.example.moved"
+        )
+        let store = MockSettingsStore(apps: [movedApp])
+        let mockWorkspace = MockWorkspaceManager()
+        mockWorkspace.applicationURLs["com.example.moved"] = URL(fileURLWithPath: "/Applications/NewPath/App.app")
+
+        let resolver = AppResolver(
+            workspaceManager: mockWorkspace,
+            fileExistsChecker: { path in path == "/Applications/NewPath/App.app" }
+        )
+
+        let viewModel = StatusViewModel(
+            settingsStore: store,
+            workspaceManager: mockWorkspace,
+            appResolver: resolver
+        )
+
+        #expect(viewModel.managedApps.count == 1)
+        #expect(viewModel.managedApps.first?.bundlePath == "/Applications/NewPath/App.app")
+        #expect(store.apps.first?.bundlePath == "/Applications/NewPath/App.app")
+        #expect(viewModel.isAppMissing(movedApp) == false)
+    }
+
+    @Test("ViewModel detects missing apps and sets missingAppIds")
+    func testMissingAppDetection() {
+        let missingApp = ManagedApp(
+            name: "DeletedApp",
+            bundlePath: "/Applications/DeletedApp.app",
+            bundleIdentifier: "com.example.deleted"
+        )
+        let store = MockSettingsStore(apps: [missingApp])
+        let mockWorkspace = MockWorkspaceManager()
+
+        let resolver = AppResolver(
+            workspaceManager: mockWorkspace,
+            fileExistsChecker: { _ in false }
+        )
+
+        let viewModel = StatusViewModel(
+            settingsStore: store,
+            workspaceManager: mockWorkspace,
+            appResolver: resolver
+        )
+
+        #expect(viewModel.isAppMissing(missingApp) == true)
+        #expect(viewModel.missingAppIds.contains(missingApp.id))
+    }
+
+    @Test("testLaunch on missing app fails gracefully without crashing")
+    func testLaunchMissingAppFailsGracefully() async {
+        let missingApp = ManagedApp(
+            name: "GhostApp",
+            bundlePath: "/Applications/GhostApp.app",
+            bundleIdentifier: "com.example.ghost"
+        )
+        let store = MockSettingsStore(apps: [missingApp])
+        let mockWorkspace = MockWorkspaceManager()
+        let suppressor = MockWindowSuppressor()
+
+        let resolver = AppResolver(
+            workspaceManager: mockWorkspace,
+            fileExistsChecker: { _ in false }
+        )
+
+        let viewModel = StatusViewModel(
+            settingsStore: store,
+            workspaceManager: mockWorkspace,
+            windowSuppressor: suppressor,
+            appResolver: resolver
+        )
+
+        await viewModel.testLaunch(app: missingApp)
+
+        #expect(suppressor.launchedApps.isEmpty)
+        #expect(viewModel.statusMessage == "Launch failed: Application not found")
+        #expect(viewModel.isAppMissing(missingApp) == true)
+    }
 }
 #endif

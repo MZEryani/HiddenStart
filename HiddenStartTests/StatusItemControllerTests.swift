@@ -84,6 +84,56 @@ struct StatusItemControllerTests {
         #expect(!fixture.mockPopover.isShown)
         #expect(fixture.mockPopover.closeCalledCount == 1)
     }
+
+    @Test("End-to-end boot launch flow executes startup run and heals apps")
+    func testEndToEndBootLaunchFlow() async throws {
+        let movedApp = ManagedApp(
+            name: "Slack",
+            bundlePath: "/Applications/OldSlack.app",
+            bundleIdentifier: "com.tinyspeck.slackmacgap",
+            delaySeconds: 0,
+            waitForInternet: false,
+            isEnabled: true
+        )
+        let store = MockSettingsStore(apps: [movedApp])
+        let mockWorkspace = MockWorkspaceManager()
+        mockWorkspace.applicationURLs["com.tinyspeck.slackmacgap"] = URL(fileURLWithPath: "/Applications/NewSlack.app")
+
+        let resolver = AppResolver(
+            workspaceManager: mockWorkspace,
+            fileExistsChecker: { path in path == "/Applications/NewSlack.app" }
+        )
+        let suppressor = MockWindowSuppressor()
+        let coordinator = LaunchCoordinator(
+            workspaceManager: mockWorkspace,
+            windowSuppressor: suppressor,
+            networkMonitor: MockNetworkMonitor(isConnected: true),
+            appResolver: resolver,
+            settingsStore: store,
+            sleep: { _ in }
+        )
+
+        let viewModel = StatusViewModel(
+            settingsStore: store,
+            workspaceManager: mockWorkspace,
+            windowSuppressor: suppressor,
+            appResolver: resolver,
+            launchCoordinator: coordinator
+        )
+
+        let controller = StatusItemController(
+            viewModel: viewModel,
+            popover: MockPopover(),
+            statusBar: nil
+        )
+
+        controller.viewModel.startStartupRun()
+        try await Task.sleep(for: .milliseconds(30))
+
+        #expect(suppressor.launchedApps.count == 1)
+        #expect(suppressor.launchedApps.first?.bundlePath == "/Applications/NewSlack.app")
+        #expect(viewModel.isAppMissing(movedApp) == false)
+    }
 }
 #endif
 

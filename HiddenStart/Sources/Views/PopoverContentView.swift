@@ -12,6 +12,8 @@ public struct PopoverContentView: View {
         VStack(alignment: .leading, spacing: 12) {
             headerView
 
+            diagnosticBannerView
+
             statusView
 
             Divider()
@@ -52,6 +54,44 @@ public struct PopoverContentView: View {
             Text(viewModel.title)
                 .font(.headline)
             Spacer()
+            Toggle("Launch HiddenStart at Login", isOn: Binding(
+                get: { viewModel.isAutoStartEnabled },
+                set: { _ in viewModel.toggleAutoStart() }
+            ))
+            .toggleStyle(.switch)
+            .controlSize(.mini)
+            .font(.caption)
+        }
+    }
+
+    @ViewBuilder
+    private var diagnosticBannerView: some View {
+        if viewModel.autoStartRequiresApproval {
+            HStack(spacing: 8) {
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .foregroundColor(.yellow)
+                    .imageScale(.medium)
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Login Item Requires Approval")
+                        .font(.caption)
+                        .fontWeight(.semibold)
+                    Text("Enable HiddenStart in System Settings > Login Items.")
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                }
+
+                Spacer()
+
+                Button("Open System Settings") {
+                    viewModel.openSystemSettingsLoginItems()
+                }
+                .buttonStyle(.borderedProminent)
+                .controlSize(.small)
+            }
+            .padding(8)
+            .background(Color.yellow.opacity(0.12))
+            .cornerRadius(6)
         }
     }
 
@@ -126,7 +166,9 @@ public struct PopoverContentView: View {
     }
 
     private func managedAppRow(_ app: ManagedApp) -> some View {
-        HStack(spacing: 10) {
+        let isMissing = viewModel.isAppMissing(app)
+
+        return HStack(spacing: 10) {
             Image(nsImage: viewModel.icon(for: app))
                 .resizable()
                 .frame(width: 28, height: 28)
@@ -136,9 +178,21 @@ public struct PopoverContentView: View {
                 HStack(spacing: 6) {
                     Text(app.name)
                         .font(.system(size: 13, weight: .medium))
-                        .foregroundColor(app.isEnabled ? .primary : .secondary)
+                        .foregroundColor(isMissing ? .secondary : (app.isEnabled ? .primary : .secondary))
 
-                    if let remainingDelay = viewModel.remainingDelays[app.id] {
+                    if isMissing {
+                        HStack(spacing: 3) {
+                            Image(systemName: "exclamationmark.triangle.fill")
+                            Text("App Not Found")
+                        }
+                        .font(.caption2)
+                        .fontWeight(.semibold)
+                        .foregroundColor(.red)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(Color.red.opacity(0.15))
+                        .cornerRadius(4)
+                    } else if let remainingDelay = viewModel.remainingDelays[app.id] {
                         HStack(spacing: 3) {
                             Image(systemName: "timer")
                             Text("\(remainingDelay)s")

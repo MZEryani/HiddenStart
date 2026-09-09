@@ -63,6 +63,8 @@ public final class LaunchCoordinator: ObservableObject, LaunchCoordinating {
     private let workspaceManager: WorkspaceManaging
     private let windowSuppressor: WindowSuppressing
     private let networkMonitor: NetworkMonitoring
+    private let appResolver: AppResolving?
+    private let settingsStore: SettingsStoring?
     private let offlineTimeout: Duration
     private let deferredRetryDuration: Duration
     private let delaySleep: SleepFunction
@@ -79,6 +81,8 @@ public final class LaunchCoordinator: ObservableObject, LaunchCoordinating {
         workspaceManager: WorkspaceManaging = SystemWorkspaceManager(),
         windowSuppressor: WindowSuppressing? = nil,
         networkMonitor: NetworkMonitoring? = nil,
+        appResolver: AppResolving? = nil,
+        settingsStore: SettingsStoring? = nil,
         offlineTimeout: Duration = .seconds(60),
         deferredRetryDuration: Duration = .seconds(900),
         sleep: @escaping SleepFunction = { try await Task.sleep(for: $0) }
@@ -87,6 +91,8 @@ public final class LaunchCoordinator: ObservableObject, LaunchCoordinating {
         self.windowSuppressor = windowSuppressor ?? WindowSuppressionEngine(workspaceManager: workspaceManager)
         let resolvedNetworkMonitor = networkMonitor ?? NetworkMonitor()
         self.networkMonitor = resolvedNetworkMonitor
+        self.appResolver = appResolver
+        self.settingsStore = settingsStore
         self.offlineTimeout = offlineTimeout
         self.deferredRetryDuration = deferredRetryDuration
         self.delaySleep = sleep
@@ -200,7 +206,7 @@ public final class LaunchCoordinator: ObservableObject, LaunchCoordinating {
                 }
 
                 if !Task.isCancelled {
-                    _ = try? await self.windowSuppressor.launch(app: app)
+                    await self.launchResolvedApp(app)
                 }
 
                 self.tasks.removeValue(forKey: taskId)
@@ -339,7 +345,7 @@ public final class LaunchCoordinator: ObservableObject, LaunchCoordinating {
                     let taskId = app.id
                     self.tasks[taskId] = Task { @MainActor [weak self] in
                         guard let self else { return }
-                        _ = try? await self.windowSuppressor.launch(app: app)
+                        await self.launchResolvedApp(app)
                         self.tasks.removeValue(forKey: taskId)
                         if self.tasks.isEmpty {
                             self.isRunning = false
@@ -421,5 +427,22 @@ public final class LaunchCoordinator: ObservableObject, LaunchCoordinating {
         }.sorted { $0.1 < $1.1 }
 
         statusSummary = sorted.map { "\($0.0) in \($0.1)s" }.joined(separator: ", ")
+    }
+
+    private func launchResolvedApp(_ app: ManagedApp) async {
+        if let appResolver = self.appResolver {
+            let resolution = appResolver.resolveApp(app)
+            switch resolution {
+            case .valid(let validApp):
+                _ = try? await self.windowSuppressor.launch(app: validApp)
+            case .healed(let healedApp):
+                try? self.settingsStore?.update(healedApp)
+                _ = try? await self.windowSuppressor.launch(app: healedApp)
+            case .missing:
+                break
+            }
+        } else {
+            _ = try? await self.windowSuppressor.launch(app: app)
+        }
     }
 }

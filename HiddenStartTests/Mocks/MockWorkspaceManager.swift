@@ -11,6 +11,7 @@ public final class MockWorkspaceManager: WorkspaceManaging {
 
     public var stubbedRunningApp: any RunningAppRepresentable = MockRunningApp()
     public var stubbedRunningApplications: [any RunningAppRepresentable] = []
+    public var applicationURLs: [String: URL] = [:]
 
     public var runningApplications: [any RunningAppRepresentable] {
         stubbedRunningApplications
@@ -30,5 +31,9 @@ public final class MockWorkspaceManager: WorkspaceManaging {
 
     public func icon(forFile fullPath: String) -> NSImage {
         return stubbedIcon
+    }
+
+    public func urlForApplication(withBundleIdentifier bundleIdentifier: String) -> URL? {
+        applicationURLs[bundleIdentifier]
     }
 }

@@ -47,6 +47,13 @@
 		D1580443A5521618217078F1 /* LaunchCoordinatorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E726CE535CBDFFD9EB666592 /* LaunchCoordinatorTests.swift */; };
 		D88461F08798382E36244DAA /* ApplicationPickerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BDCCC5E483281D4332BB19F6 /* ApplicationPickerTests.swift */; };
 		FD677C15ADEE53A300FA7CE9 /* MockWorkspaceManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A9AC978E0D6290C4228A94E4 /* MockWorkspaceManager.swift */; };
+		B10000000000000000000001 /* AutoStartManaging.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000001 /* AutoStartManaging.swift */; };
+		B10000000000000000000002 /* AppResolving.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000002 /* AppResolving.swift */; };
+		B10000000000000000000003 /* AutoStartManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000003 /* AutoStartManager.swift */; };
+		B10000000000000000000004 /* AppResolver.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000004 /* AppResolver.swift */; };
+		B10000000000000000000005 /* MockAutoStartManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000005 /* MockAutoStartManager.swift */; };
+		B10000000000000000000006 /* AutoStartManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000006 /* AutoStartManagerTests.swift */; };
+		B10000000000000000000007 /* AppResolverTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000007 /* AppResolverTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -102,6 +109,13 @@
 		F4193478EDCE6097EDFA0073 /* WorkspaceManaging.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkspaceManaging.swift; sourceTree = "<group>"; };
 		F9AAFE4D9CFAC81F7E90E8AC /* FocusGuarding.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FocusGuarding.swift; sourceTree = "<group>"; };
 		FCFD597B5F61FADF40004603 /* MockNetworkMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockNetworkMonitor.swift; sourceTree = "<group>"; };
+		A10000000000000000000001 /* AutoStartManaging.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AutoStartManaging.swift; sourceTree = "<group>"; };
+		A10000000000000000000002 /* AppResolving.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppResolving.swift; sourceTree = "<group>"; };
+		A10000000000000000000003 /* AutoStartManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AutoStartManager.swift; sourceTree = "<group>"; };
+		A10000000000000000000004 /* AppResolver.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppResolver.swift; sourceTree = "<group>"; };
+		A10000000000000000000005 /* MockAutoStartManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockAutoStartManager.swift; sourceTree = "<group>"; };
+		A10000000000000000000006 /* AutoStartManagerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AutoStartManagerTests.swift; sourceTree = "<group>"; };
+		A10000000000000000000007 /* AppResolverTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppResolverTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
@@ -142,8 +156,10 @@
 		4E2D5CD28662D44097ECB897 /* Protocols */ = {
 			isa = PBXGroup;
 			children = (
+				A10000000000000000000002 /* AppResolving.swift */,
 				75C3D88B266EE5249E076DDD /* ApplicationPickerSelecting.swift */,
 				6ECCCF2E36AA5867013B8E32 /* AppTerminating.swift */,
+				A10000000000000000000001 /* AutoStartManaging.swift */,
 				F9AAFE4D9CFAC81F7E90E8AC /* FocusGuarding.swift */,
 				442B3E737707CE3532126612 /* LaunchCoordinating.swift */,
 				B3B8531BDC6F71EE3BBF93C3 /* NetworkMonitoring.swift */,
@@ -159,6 +175,7 @@
 			isa = PBXGroup;
 			children = (
 				6801B49D58BD6020F6A041F6 /* MockApplicationPicker.swift */,
+				A10000000000000000000005 /* MockAutoStartManager.swift */,
 				75426A210B52BDD8BB24B5A0 /* MockFocusGuard.swift */,
 				5646CBFD069D96CF2F5E898C /* MockLaunchCoordinator.swift */,
 				FCFD597B5F61FADF40004603 /* MockNetworkMonitor.swift */,
@@ -189,7 +206,9 @@
 		EB96C7E392B3106D13A76152 /* HiddenStartTests */ = {
 			isa = PBXGroup;
 			children = (
+				A10000000000000000000007 /* AppResolverTests.swift */,
 				BDCCC5E483281D4332BB19F6 /* ApplicationPickerTests.swift */,
+				A10000000000000000000006 /* AutoStartManagerTests.swift */,
 				E4DBBC371D860A8CEFDA56FD /* FocusGuardTests.swift */,
 				E726CE535CBDFFD9EB666592 /* LaunchCoordinatorTests.swift */,
 				658122A75EF833E7295C1CD3 /* ManagedAppTests.swift */,
@@ -217,6 +236,8 @@
 			isa = PBXGroup;
 			children = (
 				C05E2C73945C277AEB507C08 /* ApplicationPicker.swift */,
+				A10000000000000000000004 /* AppResolver.swift */,
+				A10000000000000000000003 /* AutoStartManager.swift */,
 				BD417E7B9502DBE795FA0E11 /* FocusGuard.swift */,
 				461DFF78701E3893824F529C /* LaunchCoordinator.swift */,
 				202E0B2E1BDAAD69ED22EDDB /* NetworkMonitor.swift */,
@@ -323,6 +344,9 @@
 				AEBEA1C026E887B589DDCD2E /* StatusViewModelTests.swift in Sources */,
 				03B40C37C3B675988E9B1CD5 /* WindowSuppressionEngineTests.swift in Sources */,
 				C912E9A7DFE1E5AC9271320F /* WorkspaceManagingTests.swift in Sources */,
+				B10000000000000000000005 /* MockAutoStartManager.swift in Sources */,
+				B10000000000000000000006 /* AutoStartManagerTests.swift in Sources */,
+				B10000000000000000000007 /* AppResolverTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -330,6 +354,10 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				B10000000000000000000001 /* AutoStartManaging.swift in Sources */,
+				B10000000000000000000002 /* AppResolving.swift in Sources */,
+				B10000000000000000000003 /* AutoStartManager.swift in Sources */,
+				B10000000000000000000004 /* AppResolver.swift in Sources */,
 				31279009B3F72712424A06F4 /* AppDelegate.swift in Sources */,
 				92876BFBDC62BEFA861E88B9 /* AppInspectorSheet.swift in Sources */,
 				7D306DC739F016A6F1C8B3C7 /* AppPreset.swift in Sources */,

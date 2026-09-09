@@ -6,6 +6,7 @@ public protocol WorkspaceManaging: AnyObject, Sendable {
     @discardableResult
     func openApplication(at url: URL, configuration: NSWorkspace.OpenConfiguration) async throws -> any RunningAppRepresentable
     func icon(forFile fullPath: String) -> NSImage
+    func urlForApplication(withBundleIdentifier bundleIdentifier: String) -> URL?
 }
 
 @MainActor
@@ -28,5 +29,9 @@ public final class SystemWorkspaceManager: WorkspaceManaging {
 
     public func icon(forFile fullPath: String) -> NSImage {
         workspace.icon(forFile: fullPath)
+    }
+
+    public func urlForApplication(withBundleIdentifier bundleIdentifier: String) -> URL? {
+        workspace.urlForApplication(withBundleIdentifier: bundleIdentifier)
     }
 }
