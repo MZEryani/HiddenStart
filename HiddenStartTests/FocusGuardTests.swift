@@ -173,6 +173,8 @@ struct FocusGuardTests {
         let guardInstance = FocusGuard(
             notificationCenter: notificationCenter,
             gracePeriod: .seconds(20),
+            maxSuppressionStrikes: 2,
+            debounceInterval: 0,
             sleep: { _ in try await Task.sleep(for: .seconds(100)) }
         )
         let app = MockRunningApp(processIdentifier: 3003)
@@ -206,6 +208,112 @@ struct FocusGuardTests {
             userInfo: [NSWorkspace.applicationUserInfoKey: app]
         )
         #expect(app.hideCallCount == 2)
+    }
+
+    @Test("Paired didActivate and didUnhide notifications within debounce window coalesce to single strike")
+    func pairedNotificationsCoalesceToSingleStrike() {
+        let notificationCenter = NotificationCenter()
+        var mockTime = Date()
+        let guardInstance = FocusGuard(
+            notificationCenter: notificationCenter,
+            gracePeriod: .seconds(20),
+            maxSuppressionStrikes: 2,
+            debounceInterval: 0.3,
+            currentTime: { mockTime },
+            sleep: { _ in try await Task.sleep(for: .seconds(100)) }
+        )
+        let app = MockRunningApp(processIdentifier: 3004)
+        guardInstance.startGuarding(app: app)
+
+        // Event 1: didActivate
+        notificationCenter.post(
+            name: NSWorkspace.didActivateApplicationNotification,
+            object: nil,
+            userInfo: [NSWorkspace.applicationUserInfoKey: app]
+        )
+        #expect(app.hideCallCount == 1)
+        #expect(guardInstance.isGuarding(processIdentifier: 3004))
+
+        // Event 2: didUnhide 10ms later (within 300ms debounce window)
+        mockTime = mockTime.addingTimeInterval(0.01)
+        notificationCenter.post(
+            name: NSWorkspace.didUnhideApplicationNotification,
+            object: nil,
+            userInfo: [NSWorkspace.applicationUserInfoKey: app]
+        )
+        // hide() is called again for safety, but strike is NOT incremented
+        #expect(app.hideCallCount == 2)
+        #expect(guardInstance.isGuarding(processIdentifier: 3004))
+
+        // Event 3: Subsequent activation after debounce window (0.5s later) -> Strike 2
+        mockTime = mockTime.addingTimeInterval(0.5)
+        notificationCenter.post(
+            name: NSWorkspace.didActivateApplicationNotification,
+            object: nil,
+            userInfo: [NSWorkspace.applicationUserInfoKey: app]
+        )
+        #expect(app.hideCallCount == 3)
+        // Disarmed after 2 distinct suppression actions
+        #expect(!guardInstance.isGuarding(processIdentifier: 3004))
+    }
+
+    @Test("Multi-notification Electron launch sequence is suppressed without premature disarming")
+    func multiNotificationElectronLaunchSuppressed() {
+        let notificationCenter = NotificationCenter()
+        var mockTime = Date()
+        let guardInstance = FocusGuard(
+            notificationCenter: notificationCenter,
+            gracePeriod: .seconds(20),
+            maxSuppressionStrikes: 3,
+            debounceInterval: 0.3,
+            currentTime: { mockTime },
+            sleep: { _ in try await Task.sleep(for: .seconds(100)) }
+        )
+        let app = MockRunningApp(processIdentifier: 3005)
+        guardInstance.startGuarding(app: app)
+
+        // 1. Initial process launch handshake (paired didActivate + didUnhide within 10ms)
+        notificationCenter.post(
+            name: NSWorkspace.didActivateApplicationNotification,
+            object: nil,
+            userInfo: [NSWorkspace.applicationUserInfoKey: app]
+        )
+        mockTime = mockTime.addingTimeInterval(0.01)
+        notificationCenter.post(
+            name: NSWorkspace.didUnhideApplicationNotification,
+            object: nil,
+            userInfo: [NSWorkspace.applicationUserInfoKey: app]
+        )
+        #expect(app.hideCallCount == 2)
+        // Guard must NOT be disarmed by launch handshake!
+        #expect(guardInstance.isGuarding(processIdentifier: 3005))
+
+        // 2. Asynchronous Electron window rendering 0.8s later (paired didActivate + didUnhide)
+        mockTime = mockTime.addingTimeInterval(0.8)
+        notificationCenter.post(
+            name: NSWorkspace.didActivateApplicationNotification,
+            object: nil,
+            userInfo: [NSWorkspace.applicationUserInfoKey: app]
+        )
+        mockTime = mockTime.addingTimeInterval(0.01)
+        notificationCenter.post(
+            name: NSWorkspace.didUnhideApplicationNotification,
+            object: nil,
+            userInfo: [NSWorkspace.applicationUserInfoKey: app]
+        )
+        #expect(app.hideCallCount == 4)
+        // Still guarding after window suppression
+        #expect(guardInstance.isGuarding(processIdentifier: 3005))
+
+        // 3. User intentionally clicks Dock icon 2s later -> Strike 3 disarms guard
+        mockTime = mockTime.addingTimeInterval(2.0)
+        notificationCenter.post(
+            name: NSWorkspace.didActivateApplicationNotification,
+            object: nil,
+            userInfo: [NSWorkspace.applicationUserInfoKey: app]
+        )
+        #expect(app.hideCallCount == 5)
+        #expect(!guardInstance.isGuarding(processIdentifier: 3005))
     }
 
     @Test("Targeted cancellation cancels specific process without affecting other guarded processes")

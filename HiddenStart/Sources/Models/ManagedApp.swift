@@ -65,6 +65,11 @@ public struct ManagedApp: Identifiable, Codable, Equatable, Sendable {
         return parts.joined(separator: " • ")
     }
 
+    public var isDiscord: Bool {
+        let bundleId = bundleIdentifier?.lowercased()
+        return bundleId == "com.hnc.discord" || bundleId == "com.hammerandchisel.discord" || name.lowercased() == "discord"
+    }
+
     private enum CodingKeys: String, CodingKey {
         case id, name, bundlePath, bundleIdentifier, delaySeconds
         case waitForInternet, launchHidden, isEnabled, customArguments, sortOrder

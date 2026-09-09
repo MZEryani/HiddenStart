@@ -32,7 +32,7 @@ struct ManagedAppTests {
         #expect(decodedApp.argumentsArray == ["--debug"])
     }
 
-    @Test("AppPreset configures Discord with --start-minimized")
+    @Test("AppPreset configures Discord with launchHidden and empty arguments")
     func testDiscordPreset() {
         let app = AppPreset.makeManagedApp(
             name: "Discord",
@@ -40,7 +40,7 @@ struct ManagedAppTests {
             bundleIdentifier: "com.hammerandchisel.discord"
         )
 
-        #expect(app.customArguments == "--start-minimized")
+        #expect(app.customArguments == "")
         #expect(app.waitForInternet == true)
         #expect(app.launchHidden == true)
     }

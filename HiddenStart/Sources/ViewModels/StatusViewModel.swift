@@ -173,7 +173,11 @@ public final class StatusViewModel: ObservableObject {
             try settingsStore.add(newApp)
             managedApps = settingsStore.apps
             checkAppResolution(for: newApp)
-            statusMessage = "Added \(newApp.name)"
+            if newApp.isDiscord {
+                statusMessage = "Added Discord (Launch Hidden configured; custom arguments empty)"
+            } else {
+                statusMessage = "Added \(newApp.name)"
+            }
         } catch {
             statusMessage = "Failed to add \(newApp.name)"
         }

@@ -87,7 +87,7 @@ struct StatusViewModelTests {
     func testAddApplication() async {
         let store = MockSettingsStore()
         let picker = MockApplicationPicker()
-        let app = ManagedApp(name: "Discord", bundlePath: "/Applications/Discord.app", customArguments: "--start-minimized")
+        let app = ManagedApp(name: "Discord", bundlePath: "/Applications/Discord.app", customArguments: "")
         picker.appToReturn = app
 
         let viewModel = StatusViewModel(
@@ -101,6 +101,12 @@ struct StatusViewModelTests {
         #expect(viewModel.managedApps.first?.name == "Discord")
         #expect(store.apps.count == 1)
         #expect(store.saveCallCount == 1)
+        #expect(viewModel.statusMessage == "Added Discord (Launch Hidden configured; custom arguments empty)")
+
+        let otherApp = ManagedApp(name: "Slack", bundlePath: "/Applications/Slack.app")
+        picker.appToReturn = otherApp
+        await viewModel.addApplication()
+        #expect(viewModel.statusMessage == "Added Slack")
     }
 
     @Test("Removing application removes from store and updates managedApps")
@@ -393,13 +399,13 @@ struct StatusViewModelTests {
             bundleIdentifier: "com.hnc.Discord",
             customArguments: ""
         )
-        let antigravity = ManagedApp(
-            name: "Antigravity",
-            bundlePath: "/Applications/Antigravity.app",
-            bundleIdentifier: "com.google.antigravity",
+        let steam = ManagedApp(
+            name: "Steam",
+            bundlePath: "/Applications/Steam.app",
+            bundleIdentifier: "com.valvesoftware.steam",
             customArguments: ""
         )
-        let store = MockSettingsStore(apps: [discord, antigravity])
+        let store = MockSettingsStore(apps: [discord, steam])
         let coordinator = MockLaunchCoordinator()
         let mockWorkspace = MockWorkspaceManager()
 
@@ -419,8 +425,10 @@ struct StatusViewModelTests {
 
         #expect(coordinator.startStartupRunCallCount == 1)
         #expect(coordinator.lastAppsStarted.count == 2)
-        // Discord should have healed preset arguments backfilled
-        #expect(viewModel.managedApps.first { $0.bundleIdentifier == "com.hnc.Discord" }?.customArguments == "--start-minimized")
+        // Discord has empty customArguments
+        #expect(viewModel.managedApps.first { $0.bundleIdentifier == "com.hnc.Discord" }?.customArguments == "")
+        // Steam should have healed preset arguments backfilled
+        #expect(viewModel.managedApps.first { $0.bundleIdentifier == "com.valvesoftware.steam" }?.customArguments == "-silent")
     }
 }
 #endif

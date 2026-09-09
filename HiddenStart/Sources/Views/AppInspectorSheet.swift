@@ -135,14 +135,24 @@ public struct AppInspectorSheet: View {
         }
     }
 
+    private var isDiscord: Bool {
+        app.isDiscord
+    }
+
     private var argumentsSection: some View {
         VStack(alignment: .leading, spacing: 6) {
             Text("Custom Arguments")
                 .font(.subheadline)
                 .fontWeight(.medium)
 
-            TextField("e.g. --start-minimized or -silent", text: $customArguments)
+            TextField("e.g. -silent or --flag", text: $customArguments)
                 .textFieldStyle(.roundedBorder)
+
+            if isDiscord {
+                Text("Discord does not require --start-minimized. Launch Hidden manages window suppression automatically.")
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
+            }
         }
     }
 

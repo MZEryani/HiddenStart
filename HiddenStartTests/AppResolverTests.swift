@@ -161,19 +161,19 @@ struct AppResolverTests {
     func testModernDiscordPresetRecognition() {
         let presetConfig = AppPreset.knownPresets["com.hnc.discord"]
         #expect(presetConfig != nil)
-        #expect(presetConfig?.customArguments == "--start-minimized")
+        #expect(presetConfig?.customArguments == "")
         #expect(presetConfig?.waitForInternet == true)
         #expect(presetConfig?.launchHidden == true)
 
         let defaultArgs = AppPreset.defaultArguments(forBundleId: "COM.HNC.DISCORD")
-        #expect(defaultArgs == "--start-minimized")
+        #expect(defaultArgs == nil)
 
         let managedApp = AppPreset.makeManagedApp(
             name: "Discord",
             bundlePath: "/Applications/Discord.app",
             bundleIdentifier: "com.hnc.Discord"
         )
-        #expect(managedApp.customArguments == "--start-minimized")
+        #expect(managedApp.customArguments == "")
         #expect(managedApp.waitForInternet == true)
         #expect(managedApp.launchHidden == true)
     }
@@ -184,23 +184,59 @@ struct AppResolverTests {
         let storeURL = tempDir.appendingPathComponent("apps.json")
         let store = SettingsStore(fileURL: storeURL)
 
-        // Existing Discord app saved without arguments
-        let existingDiscord = ManagedApp(
-            name: "Discord",
-            bundlePath: "/Applications/Discord.app",
-            bundleIdentifier: "com.hnc.Discord",
+        // Existing Steam app saved without arguments
+        let existingSteam = ManagedApp(
+            name: "Steam",
+            bundlePath: "/Applications/Steam.app",
+            bundleIdentifier: "com.valvesoftware.steam",
             customArguments: ""
         )
         // Existing app with custom user-supplied arguments that should NOT be overwritten
         let customApp = ManagedApp(
-            name: "Discord Custom",
-            bundlePath: "/Applications/Discord.app",
-            bundleIdentifier: "com.hnc.Discord",
+            name: "Steam Custom",
+            bundlePath: "/Applications/Steam.app",
+            bundleIdentifier: "com.valvesoftware.steam",
             customArguments: "--custom-flag"
         )
 
-        try store.add(existingDiscord)
+        try store.add(existingSteam)
         try store.add(customApp)
+
+        let mockWorkspace = MockWorkspaceManager()
+        let resolver = AppResolver(
+            workspaceManager: mockWorkspace,
+            fileExistsChecker: { $0 == "/Applications/Steam.app" }
+        )
+
+        let resolved = resolver.resolveAndHeal(apps: store.apps, store: store)
+
+        #expect(resolved.count == 2)
+        #expect(resolved[0].customArguments == "-silent")
+        #expect(resolved[1].customArguments == "--custom-flag")
+
+        let storedSteam = store.apps.first { $0.id == existingSteam.id }
+        #expect(storedSteam?.customArguments == "-silent")
+
+        let storedCustom = store.apps.first { $0.id == customApp.id }
+        #expect(storedCustom?.customArguments == "--custom-flag")
+
+        try? FileManager.default.removeItem(at: tempDir)
+    }
+
+    @Test("resolveAndHeal preserves user-configured customArguments without overwriting")
+    func testResolveAndHealPreservesUserArguments() throws {
+        let tempDir = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        let storeURL = tempDir.appendingPathComponent("apps.json")
+        let store = SettingsStore(fileURL: storeURL)
+
+        let userConfiguredApp = ManagedApp(
+            name: "Discord",
+            bundlePath: "/Applications/Discord.app",
+            bundleIdentifier: "com.hnc.Discord",
+            customArguments: "--custom-user-arg"
+        )
+
+        try store.add(userConfiguredApp)
 
         let mockWorkspace = MockWorkspaceManager()
         let resolver = AppResolver(
@@ -210,15 +246,11 @@ struct AppResolverTests {
 
         let resolved = resolver.resolveAndHeal(apps: store.apps, store: store)
 
-        #expect(resolved.count == 2)
-        #expect(resolved[0].customArguments == "--start-minimized")
-        #expect(resolved[1].customArguments == "--custom-flag")
+        #expect(resolved.count == 1)
+        #expect(resolved[0].customArguments == "--custom-user-arg")
 
-        let storedDiscord = store.apps.first { $0.id == existingDiscord.id }
-        #expect(storedDiscord?.customArguments == "--start-minimized")
-
-        let storedCustom = store.apps.first { $0.id == customApp.id }
-        #expect(storedCustom?.customArguments == "--custom-flag")
+        let storedApp = store.apps.first { $0.id == userConfiguredApp.id }
+        #expect(storedApp?.customArguments == "--custom-user-arg")
 
         try? FileManager.default.removeItem(at: tempDir)
     }

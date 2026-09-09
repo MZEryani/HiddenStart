@@ -29,7 +29,9 @@ struct SettingsStoreTests {
         let fileURL = createTempFileURL()
         defer { try? FileManager.default.removeItem(at: fileURL.deletingLastPathComponent()) }
 
-        let store = SettingsStore(fileURL: fileURL)
+        let userDefaults = UserDefaults(suiteName: UUID().uuidString)!
+        userDefaults.set(true, forKey: "hasMigratedDiscordPresetArguments")
+        let store = SettingsStore(fileURL: fileURL, userDefaults: userDefaults)
         let app1 = ManagedApp(name: "Discord", bundlePath: "/Applications/Discord.app", customArguments: "--start-minimized")
         let app2 = ManagedApp(name: "Steam", bundlePath: "/Applications/Steam.app", customArguments: "-silent")
 
@@ -39,7 +41,7 @@ struct SettingsStoreTests {
         #expect(FileManager.default.fileExists(atPath: fileURL.path))
 
         // Create a new store instance pointing to the same file
-        let reloadedStore = SettingsStore(fileURL: fileURL)
+        let reloadedStore = SettingsStore(fileURL: fileURL, userDefaults: userDefaults)
         try reloadedStore.load()
 
         #expect(reloadedStore.apps.count == 2)
@@ -106,5 +108,83 @@ struct SettingsStoreTests {
         #expect(migratedApp.waitForInternet == true)
         #expect(migratedApp.launchHidden == true)
         #expect(migratedApp.isEnabled == true)
+    }
+
+    @Test("Loading store with legacy Discord entry migrates --start-minimized to empty string")
+    @MainActor
+    func testDiscordLegacyStartMinimizedMigration() throws {
+        let fileURL = createTempFileURL()
+        defer { try? FileManager.default.removeItem(at: fileURL.deletingLastPathComponent()) }
+
+        try FileManager.default.createDirectory(at: fileURL.deletingLastPathComponent(), withIntermediateDirectories: true)
+
+        let discordJSON = """
+        [
+            {
+                "id": "\(UUID().uuidString)",
+                "name": "Discord",
+                "bundlePath": "/Applications/Discord.app",
+                "bundleIdentifier": "com.hnc.Discord",
+                "customArguments": "--start-minimized",
+                "delaySeconds": 10,
+                "waitForInternet": true,
+                "launchHidden": true,
+                "isEnabled": true,
+                "sortOrder": 0
+            }
+        ]
+        """
+        try discordJSON.data(using: .utf8)!.write(to: fileURL)
+
+        let userDefaults = UserDefaults(suiteName: UUID().uuidString)!
+        let store = SettingsStore(fileURL: fileURL, userDefaults: userDefaults)
+        try store.load()
+
+        #expect(store.apps.count == 1)
+        #expect(store.apps[0].customArguments == "")
+        #expect(userDefaults.bool(forKey: "hasMigratedDiscordPresetArguments") == true)
+    }
+
+    @Test("Loading store with legacy Discord entry migrates --start-minimized while preserving user arguments")
+    @MainActor
+    func testDiscordLegacyStartMinimizedMigrationPreservesUserArguments() throws {
+        let fileURL = createTempFileURL()
+        defer { try? FileManager.default.removeItem(at: fileURL.deletingLastPathComponent()) }
+
+        try FileManager.default.createDirectory(at: fileURL.deletingLastPathComponent(), withIntermediateDirectories: true)
+
+        let discordJSON = """
+        [
+            {
+                "id": "\(UUID().uuidString)",
+                "name": "Discord",
+                "bundlePath": "/Applications/Discord.app",
+                "bundleIdentifier": "com.hnc.Discord",
+                "customArguments": "--start-minimized --disable-smooth-scrolling",
+                "delaySeconds": 10,
+                "waitForInternet": true,
+                "launchHidden": true,
+                "isEnabled": true,
+                "sortOrder": 0
+            }
+        ]
+        """
+        try discordJSON.data(using: .utf8)!.write(to: fileURL)
+
+        let userDefaults = UserDefaults(suiteName: UUID().uuidString)!
+        let store = SettingsStore(fileURL: fileURL, userDefaults: userDefaults)
+        try store.load()
+
+        #expect(store.apps.count == 1)
+        #expect(store.apps[0].customArguments == "--disable-smooth-scrolling")
+        #expect(userDefaults.bool(forKey: "hasMigratedDiscordPresetArguments") == true)
+
+        // Modify arguments, reload store, ensure migration does not overwrite user changes
+        store.apps[0].customArguments = "--user-updated-flag"
+        try store.save()
+
+        let reloadedStore = SettingsStore(fileURL: fileURL, userDefaults: userDefaults)
+        try reloadedStore.load()
+        #expect(reloadedStore.apps[0].customArguments == "--user-updated-flag")
     }
 }

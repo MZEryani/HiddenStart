@@ -31,3 +31,7 @@ _Avoid_: App template, default profile
 **Deferred Retry**:
 The bounded observation window following an offline startup run during which skipped network-gated apps are triggered if connectivity is established.
 _Avoid_: Reconnect watcher, delayed launch
+
+**Suppression Episode**:
+A single observable visual transition or focus-stealing event by a managed app during launch, which may emit multiple clustered system notifications.
+_Avoid_: Notification burst, suppression event, focus bounce

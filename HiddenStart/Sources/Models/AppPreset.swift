@@ -9,7 +9,7 @@ public struct PresetConfiguration: Sendable {
 
 public enum AppPreset {
     private static let discordPreset = PresetConfiguration(
-        customArguments: "--start-minimized",
+        customArguments: "",
         waitForInternet: true,
         launchHidden: true,
         maxDelaySeconds: nil

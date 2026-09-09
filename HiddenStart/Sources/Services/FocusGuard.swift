@@ -3,16 +3,20 @@ import Foundation
 
 @MainActor
 public final class FocusGuard: NSObject, FocusGuarding {
-    private static let maxSuppressionStrikes = 2
+    public static let defaultMaxSuppressionStrikes = 3
 
     private struct GuardEntry {
         let app: any RunningAppRepresentable
         var strikeCount: Int = 0
+        var lastStrikeTime: Date = .distantPast
         var timeoutTask: Task<Void, Never>?
     }
 
     private let notificationCenter: NotificationCenter
     private let gracePeriod: Duration
+    private let maxSuppressionStrikes: Int
+    private let debounceInterval: TimeInterval
+    private let currentTime: @MainActor () -> Date
     private let sleep: @MainActor (Duration) async throws -> Void
 
     private var registry: [pid_t: GuardEntry] = [:]
@@ -25,10 +29,16 @@ public final class FocusGuard: NSObject, FocusGuarding {
     public init(
         notificationCenter: NotificationCenter = NSWorkspace.shared.notificationCenter,
         gracePeriod: Duration = .seconds(20),
+        maxSuppressionStrikes: Int = FocusGuard.defaultMaxSuppressionStrikes,
+        debounceInterval: TimeInterval = 0.3,
+        currentTime: @escaping @MainActor () -> Date = { Date() },
         sleep: @escaping @MainActor (Duration) async throws -> Void = { try await Task.sleep(for: $0) }
     ) {
         self.notificationCenter = notificationCenter
         self.gracePeriod = gracePeriod
+        self.maxSuppressionStrikes = maxSuppressionStrikes
+        self.debounceInterval = debounceInterval
+        self.currentTime = currentTime
         self.sleep = sleep
         super.init()
     }
@@ -118,9 +128,18 @@ public final class FocusGuard: NSObject, FocusGuarding {
         guard var entry = registry[pid] else { return }
 
         entry.app.hide()
-        entry.strikeCount += 1
 
-        if entry.strikeCount >= Self.maxSuppressionStrikes {
+        let now = currentTime()
+        if now.timeIntervalSince(entry.lastStrikeTime) < debounceInterval {
+            // Rapid paired notification for the same suppression episode (e.g. didActivate + didUnhide);
+            // hide() has already been invoked above, but we coalesce into a single suppression strike.
+            return
+        }
+
+        entry.strikeCount += 1
+        entry.lastStrikeTime = now
+
+        if entry.strikeCount >= maxSuppressionStrikes {
             stopGuarding(processIdentifier: pid)
         } else {
             registry[pid] = entry

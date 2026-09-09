@@ -7,6 +7,7 @@ public final class SettingsStore: ObservableObject, SettingsStoring {
 
     public let fileURL: URL
     private let fileManager: FileManager
+    private let userDefaults: UserDefaults
 
     public static var defaultStorageURL: URL {
         let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
@@ -15,11 +16,15 @@ public final class SettingsStore: ObservableObject, SettingsStoring {
 
     public init(
         fileURL: URL = SettingsStore.defaultStorageURL,
-        fileManager: FileManager = .default
+        fileManager: FileManager = .default,
+        userDefaults: UserDefaults = .standard
     ) {
         self.fileURL = fileURL
         self.fileManager = fileManager
+        self.userDefaults = userDefaults
     }
+
+    public static let discordMigrationKey = "hasMigratedDiscordPresetArguments"
 
     public func load() throws {
         guard fileManager.fileExists(atPath: fileURL.path) else {
@@ -29,7 +34,29 @@ public final class SettingsStore: ObservableObject, SettingsStoring {
 
         let data = try Data(contentsOf: fileURL)
         let decoder = JSONDecoder()
-        apps = try decoder.decode([ManagedApp].self, from: data)
+        var decodedApps = try decoder.decode([ManagedApp].self, from: data)
+
+        if !userDefaults.bool(forKey: Self.discordMigrationKey) {
+            var didMigrate = false
+            for i in 0..<decodedApps.count {
+                if decodedApps[i].isDiscord {
+                    let tokens = decodedApps[i].customArguments.components(separatedBy: .whitespacesAndNewlines).filter { !$0.isEmpty }
+                    if tokens.contains("--start-minimized") {
+                        let remainingTokens = tokens.filter { $0 != "--start-minimized" }
+                        decodedApps[i].customArguments = remainingTokens.joined(separator: " ")
+                        didMigrate = true
+                    }
+                }
+            }
+            userDefaults.set(true, forKey: Self.discordMigrationKey)
+            if didMigrate {
+                self.apps = decodedApps
+                try? save()
+                return
+            }
+        }
+
+        self.apps = decodedApps
     }
 
     public func save() throws {
