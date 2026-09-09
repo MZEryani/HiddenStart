@@ -1,6 +1,34 @@
 import Foundation
 
+public struct PresetConfiguration: Sendable {
+    public let customArguments: String
+    public let waitForInternet: Bool
+    public let launchHidden: Bool
+    public let maxDelaySeconds: Int?
+}
+
 public enum AppPreset {
+    public static let knownPresets: [String: PresetConfiguration] = [
+        "com.hammerandchisel.discord": PresetConfiguration(
+            customArguments: "--start-minimized",
+            waitForInternet: true,
+            launchHidden: true,
+            maxDelaySeconds: nil
+        ),
+        "com.valvesoftware.steam": PresetConfiguration(
+            customArguments: "-silent",
+            waitForInternet: true,
+            launchHidden: true,
+            maxDelaySeconds: nil
+        ),
+        "com.spotify.client": PresetConfiguration(
+            customArguments: "",
+            waitForInternet: false,
+            launchHidden: true,
+            maxDelaySeconds: 5
+        )
+    ]
+
     public static func makeManagedApp(
         name: String,
         bundlePath: String,
@@ -8,27 +36,10 @@ public enum AppPreset {
         delaySeconds: Int = 10,
         sortOrder: Int = 0
     ) -> ManagedApp {
-        var customArguments = ""
-        var waitForInternet = true
-        var launchHidden = true
+        let preset = bundleIdentifier.flatMap { knownPresets[$0.lowercased()] }
         var resolvedDelay = delaySeconds
-
-        switch bundleIdentifier?.lowercased() {
-        case "com.hammerandchisel.discord":
-            customArguments = "--start-minimized"
-            waitForInternet = true
-            launchHidden = true
-        case "com.valvesoftware.steam":
-            customArguments = "-silent"
-            waitForInternet = true
-            launchHidden = true
-        case "com.spotify.client":
-            customArguments = ""
-            waitForInternet = false
-            launchHidden = true
-            resolvedDelay = min(resolvedDelay, 5)
-        default:
-            break
+        if let maxDelay = preset?.maxDelaySeconds {
+            resolvedDelay = min(resolvedDelay, maxDelay)
         }
 
         return ManagedApp(
@@ -36,11 +47,20 @@ public enum AppPreset {
             bundlePath: bundlePath,
             bundleIdentifier: bundleIdentifier,
             delaySeconds: resolvedDelay,
-            waitForInternet: waitForInternet,
-            launchHidden: launchHidden,
+            waitForInternet: preset?.waitForInternet ?? true,
+            launchHidden: preset?.launchHidden ?? true,
             isEnabled: true,
-            customArguments: customArguments,
+            customArguments: preset?.customArguments ?? "",
             sortOrder: sortOrder
         )
+    }
+
+    public static func defaultArguments(forBundleId bundleId: String?) -> String? {
+        guard let bundleId = bundleId?.lowercased(),
+              let args = knownPresets[bundleId]?.customArguments,
+              !args.isEmpty else {
+            return nil
+        }
+        return args
     }
 }

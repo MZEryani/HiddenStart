@@ -2,6 +2,7 @@ import AppKit
 
 @MainActor
 public protocol WorkspaceManaging: AnyObject, Sendable {
+    var runningApplications: [any RunningAppRepresentable] { get }
     @discardableResult
     func openApplication(at url: URL, configuration: NSWorkspace.OpenConfiguration) async throws -> any RunningAppRepresentable
     func icon(forFile fullPath: String) -> NSImage
@@ -13,6 +14,10 @@ public final class SystemWorkspaceManager: WorkspaceManaging {
 
     public init(workspace: NSWorkspace = .shared) {
         self.workspace = workspace
+    }
+
+    public var runningApplications: [any RunningAppRepresentable] {
+        workspace.runningApplications
     }
 
     @discardableResult

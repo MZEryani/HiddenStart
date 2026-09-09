@@ -164,5 +164,87 @@ struct StatusViewModelTests {
         #expect(suppressor.launchedApps.first?.id == app.id)
         #expect(viewModel.statusMessage == "Test launch triggered for Discord")
     }
+
+    @Test("startStartupRun delegates to launch coordinator")
+    func startStartupRunDelegatesToCoordinator() {
+        let app = ManagedApp(name: "Discord", bundlePath: "/Applications/Discord.app")
+        let store = MockSettingsStore(apps: [app])
+        let coordinator = MockLaunchCoordinator()
+        let viewModel = StatusViewModel(settingsStore: store, launchCoordinator: coordinator)
+
+        viewModel.startStartupRun()
+
+        #expect(coordinator.startStartupRunCallCount == 1)
+        #expect(coordinator.lastAppsStarted.count == 1)
+        #expect(coordinator.lastAppsStarted.first?.id == app.id)
+    }
+
+    @Test("Toggling app to disabled cancels in-flight launch")
+    func toggleAppToDisabledCancelsLaunch() {
+        let app = ManagedApp(name: "Discord", bundlePath: "/Applications/Discord.app", isEnabled: true)
+        let store = MockSettingsStore(apps: [app])
+        let coordinator = MockLaunchCoordinator()
+        let viewModel = StatusViewModel(settingsStore: store, launchCoordinator: coordinator)
+
+        viewModel.toggleAppEnabled(withId: app.id)
+
+        #expect(coordinator.cancelledAppIds == [app.id])
+    }
+
+    @Test("Removing app cancels in-flight launch")
+    func removingAppCancelsLaunch() {
+        let app = ManagedApp(name: "Discord", bundlePath: "/Applications/Discord.app")
+        let store = MockSettingsStore(apps: [app])
+        let coordinator = MockLaunchCoordinator()
+        let viewModel = StatusViewModel(settingsStore: store, launchCoordinator: coordinator)
+
+        viewModel.removeApplication(withId: app.id)
+
+        #expect(coordinator.cancelledAppIds == [app.id])
+    }
+
+    @Test("Quitting cancels all in-flight launches")
+    func quittingCancelsAllLaunches() {
+        let mockTerminator = MockAppTerminator()
+        let coordinator = MockLaunchCoordinator()
+        let viewModel = StatusViewModel(terminator: mockTerminator, launchCoordinator: coordinator)
+
+        viewModel.quit()
+
+        #expect(coordinator.cancelAllCallCount == 1)
+        #expect(mockTerminator.terminateCalled)
+    }
+
+    @Test("Updating application updates store and managedApps list")
+    func updateApplicationUpdatesStore() {
+        let app = ManagedApp(name: "Discord", bundlePath: "/Applications/Discord.app", delaySeconds: 10)
+        let store = MockSettingsStore(apps: [app])
+        let viewModel = StatusViewModel(settingsStore: store)
+
+        var modified = app
+        modified.delaySeconds = 30
+        viewModel.updateApplication(modified)
+
+        #expect(viewModel.managedApps.first?.delaySeconds == 30)
+        #expect(store.apps.first?.delaySeconds == 30)
+        #expect(store.saveCallCount == 1)
+    }
+
+    @Test("Coordinator delay updates remainingDelays and statusMessage")
+    func delayUpdatesRemainingDelaysAndStatus() async {
+        let coordinator = MockLaunchCoordinator()
+        let viewModel = StatusViewModel(launchCoordinator: coordinator)
+
+        let id = UUID()
+        coordinator.isRunning = true
+        coordinator.statusSummary = "Discord in 5s"
+        coordinator.remainingDelays = [id: 5]
+
+        // Yield to allow Combine pipeline to run
+        await Task.yield()
+
+        #expect(viewModel.remainingDelays[id] == 5)
+        #expect(viewModel.statusMessage == "Discord in 5s")
+    }
 }
 #endif

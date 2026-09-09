@@ -10,6 +10,11 @@ public final class MockWorkspaceManager: WorkspaceManaging {
     public var stubbedIcon: NSImage = NSImage()
 
     public var stubbedRunningApp: any RunningAppRepresentable = MockRunningApp()
+    public var stubbedRunningApplications: [any RunningAppRepresentable] = []
+
+    public var runningApplications: [any RunningAppRepresentable] {
+        stubbedRunningApplications
+    }
 
     public init() {}
 

@@ -5,6 +5,7 @@ import Foundation
 public final class MockRunningApp: RunningAppRepresentable {
     public var processIdentifier: pid_t
     public var bundleIdentifier: String?
+    public var bundleURL: URL?
     public var isFinishedLaunching: Bool
     public var hideCallCount: Int = 0
     public var hideReturnValue: Bool = true
@@ -12,10 +13,12 @@ public final class MockRunningApp: RunningAppRepresentable {
     public init(
         processIdentifier: pid_t = 1234,
         bundleIdentifier: String? = "com.test.app",
+        bundleURL: URL? = nil,
         isFinishedLaunching: Bool = true
     ) {
         self.processIdentifier = processIdentifier
         self.bundleIdentifier = bundleIdentifier
+        self.bundleURL = bundleURL
         self.isFinishedLaunching = isFinishedLaunching
     }
 

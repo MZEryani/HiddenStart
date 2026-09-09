@@ -2,6 +2,7 @@ import SwiftUI
 
 public struct PopoverContentView: View {
     @ObservedObject public var viewModel: StatusViewModel
+    @State private var editingApp: ManagedApp?
 
     public init(viewModel: StatusViewModel) {
         self.viewModel = viewModel
@@ -22,7 +23,25 @@ public struct PopoverContentView: View {
             footerView
         }
         .padding(16)
-        .frame(width: 360)
+        .frame(width: 380)
+        .sheet(item: $editingApp) { app in
+            AppInspectorSheet(
+                app: app,
+                icon: viewModel.icon(for: app),
+                onSave: { updatedApp in
+                    viewModel.updateApplication(updatedApp)
+                    editingApp = nil
+                },
+                onCancel: {
+                    editingApp = nil
+                },
+                onTestLaunch: { configuredApp in
+                    Task {
+                        await viewModel.testLaunch(app: configuredApp)
+                    }
+                }
+            )
+        }
     }
 
     private var headerView: some View {
@@ -94,25 +113,43 @@ public struct PopoverContentView: View {
                 .cornerRadius(4)
 
             VStack(alignment: .leading, spacing: 2) {
-                HStack(spacing: 4) {
+                HStack(spacing: 6) {
                     Text(app.name)
                         .font(.system(size: 13, weight: .medium))
                         .foregroundColor(app.isEnabled ? .primary : .secondary)
 
-                    if !app.isEnabled {
+                    if let remainingDelay = viewModel.remainingDelays[app.id] {
+                        HStack(spacing: 3) {
+                            Image(systemName: "timer")
+                            Text("\(remainingDelay)s")
+                        }
+                        .font(.caption2)
+                        .fontWeight(.semibold)
+                        .foregroundColor(.orange)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(Color.orange.opacity(0.15))
+                        .cornerRadius(4)
+                    } else if !app.isEnabled {
                         Text("(Disabled)")
                             .font(.caption2)
                             .foregroundColor(.secondary)
                     }
                 }
 
-                Text(summaryText(for: app))
+                Text(app.configurationSummary)
                     .font(.caption2)
                     .foregroundColor(.secondary)
                     .lineLimit(1)
             }
 
             Spacer()
+
+            Button("Edit") {
+                editingApp = app
+            }
+            .buttonStyle(.bordered)
+            .controlSize(.small)
 
             Button("Test") {
                 Task {
@@ -133,24 +170,22 @@ public struct PopoverContentView: View {
         .padding(8)
         .background(Color(NSColor.controlBackgroundColor))
         .cornerRadius(6)
-    }
-
-    private func summaryText(for app: ManagedApp) -> String {
-        var parts: [String] = []
-        parts.append("Wait \(app.delaySeconds)s")
-        if app.waitForInternet {
-            parts.append("Network Gate")
-        }
-        if app.launchHidden {
-            var hiddenPart = "Launch Hidden"
-            if !app.customArguments.isEmpty {
-                hiddenPart += " (\(app.customArguments))"
+        .contextMenu {
+            Button("Edit Settings...") {
+                editingApp = app
             }
-            parts.append(hiddenPart)
-        } else if !app.customArguments.isEmpty {
-            parts.append(app.customArguments)
+            Button("Test Launch") {
+                Task {
+                    await viewModel.testLaunch(app: app)
+                }
+            }
+            Divider()
+            Button(role: .destructive) {
+                viewModel.removeApplication(withId: app.id)
+            } label: {
+                Label("Remove Application", systemImage: "trash")
+            }
         }
-        return parts.joined(separator: " • ")
     }
 
     private var footerView: some View {

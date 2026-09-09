@@ -47,6 +47,24 @@ public struct ManagedApp: Identifiable, Codable, Equatable, Sendable {
             .filter { !$0.isEmpty }
     }
 
+    public var configurationSummary: String {
+        var parts: [String] = []
+        parts.append("Wait \(delaySeconds)s")
+        if waitForInternet {
+            parts.append("Network Gate")
+        }
+        if launchHidden {
+            var hiddenPart = "Launch Hidden"
+            if !customArguments.isEmpty {
+                hiddenPart += " (\(customArguments))"
+            }
+            parts.append(hiddenPart)
+        } else if !customArguments.isEmpty {
+            parts.append(customArguments)
+        }
+        return parts.joined(separator: " • ")
+    }
+
     private enum CodingKeys: String, CodingKey {
         case id, name, bundlePath, bundleIdentifier, delaySeconds
         case waitForInternet, launchHidden, isEnabled, customArguments, sortOrder

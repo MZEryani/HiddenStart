@@ -6,5 +6,10 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
 
     public func applicationDidFinishLaunching(_ notification: Notification) {
         statusItemController = StatusItemController()
+        statusItemController?.viewModel.startStartupRun()
+    }
+
+    public func applicationWillTerminate(_ notification: Notification) {
+        statusItemController?.viewModel.quit()
     }
 }
