@@ -12,6 +12,7 @@ public final class StatusViewModel: ObservableObject {
     private let settingsStore: SettingsStoring
     private let workspaceManager: WorkspaceManaging
     private let appPicker: ApplicationPickerSelecting
+    private let windowSuppressor: WindowSuppressing
 
     public init(
         title: String = "HiddenStart",
@@ -19,16 +20,19 @@ public final class StatusViewModel: ObservableObject {
         terminator: AppTerminating = SystemAppTerminator(),
         settingsStore: SettingsStoring? = nil,
         workspaceManager: WorkspaceManaging? = nil,
-        appPicker: ApplicationPickerSelecting? = nil
+        appPicker: ApplicationPickerSelecting? = nil,
+        windowSuppressor: WindowSuppressing? = nil
     ) {
         self.title = title
         self.statusMessage = statusMessage
         self.terminator = terminator
 
         let resolvedStore = settingsStore ?? SettingsStore()
+        let resolvedWorkspace = workspaceManager ?? SystemWorkspaceManager()
         self.settingsStore = resolvedStore
-        self.workspaceManager = workspaceManager ?? SystemWorkspaceManager()
+        self.workspaceManager = resolvedWorkspace
         self.appPicker = appPicker ?? ApplicationPicker()
+        self.windowSuppressor = windowSuppressor ?? WindowSuppressionEngine(workspaceManager: resolvedWorkspace)
 
         if settingsStore == nil {
             try? resolvedStore.load()
@@ -78,16 +82,8 @@ public final class StatusViewModel: ObservableObject {
 
     public func testLaunch(app: ManagedApp) async {
         statusMessage = "Launching \(app.name)..."
-        let config = NSWorkspace.OpenConfiguration()
-        config.hides = app.launchHidden
-        config.activates = false
-        let args = app.argumentsArray
-        if !args.isEmpty {
-            config.arguments = args
-        }
-
         do {
-            try await workspaceManager.openApplication(at: app.bundleURL, configuration: config)
+            try await windowSuppressor.launch(app: app)
             statusMessage = "Test launch triggered for \(app.name)"
         } catch {
             statusMessage = "Launch failed: \(error.localizedDescription)"

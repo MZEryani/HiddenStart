@@ -24,12 +24,13 @@ struct WorkspaceManagingTests {
             config.arguments = args
         }
 
-        try await mockWorkspace.openApplication(at: app.bundleURL, configuration: config)
+        let runningApp = try await mockWorkspace.openApplication(at: app.bundleURL, configuration: config)
 
         #expect(mockWorkspace.openedURLs.count == 1)
         #expect(mockWorkspace.openedURLs.first == app.bundleURL)
         #expect(mockWorkspace.configurations.first?.hides == true)
         #expect(mockWorkspace.configurations.first?.activates == false)
         #expect(mockWorkspace.configurations.first?.arguments == ["--start-minimized", "--multi-instance"])
+        #expect(runningApp.processIdentifier == 1234)
     }
 }

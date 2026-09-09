@@ -151,5 +151,18 @@ struct StatusViewModelTests {
         #expect(workspace.configurations.first?.arguments == ["-silent"])
         #expect(viewModel.statusMessage == "Test launch triggered for Steam")
     }
+
+    @Test("Test launch delegates to window suppressor")
+    func testLaunchDelegatesToSuppressor() async {
+        let suppressor = MockWindowSuppressor()
+        let app = ManagedApp(name: "Discord", bundlePath: "/Applications/Discord.app", launchHidden: true)
+        let viewModel = StatusViewModel(windowSuppressor: suppressor)
+
+        await viewModel.testLaunch(app: app)
+
+        #expect(suppressor.launchedApps.count == 1)
+        #expect(suppressor.launchedApps.first?.id == app.id)
+        #expect(viewModel.statusMessage == "Test launch triggered for Discord")
+    }
 }
 #endif

@@ -9,14 +9,18 @@ public final class MockWorkspaceManager: WorkspaceManaging {
     public var shouldThrowError: Error?
     public var stubbedIcon: NSImage = NSImage()
 
+    public var stubbedRunningApp: any RunningAppRepresentable = MockRunningApp()
+
     public init() {}
 
-    public func openApplication(at url: URL, configuration: NSWorkspace.OpenConfiguration) async throws {
+    @discardableResult
+    public func openApplication(at url: URL, configuration: NSWorkspace.OpenConfiguration) async throws -> any RunningAppRepresentable {
         if let error = shouldThrowError {
             throw error
         }
         openedURLs.append(url)
         configurations.append(configuration)
+        return stubbedRunningApp
     }
 
     public func icon(forFile fullPath: String) -> NSImage {
