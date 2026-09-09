@@ -1,0 +1,46 @@
+name: HiddenStart
+options:
+  bundleIdPrefix: com.mzeryani
+  deploymentTarget:
+    macOS: "13.0"
+  xcodeVersion: "15.0"
+settings:
+  SWIFT_VERSION: "6.0"
+  MACOSX_DEPLOYMENT_TARGET: "13.0"
+  ENABLE_HARDENED_RUNTIME: YES
+  CODE_SIGN_STYLE: Automatic
+  COMBINE_HIDPI_IMAGES: YES
+
+targets:
+  HiddenStart:
+    type: application
+    platform: macOS
+    sources:
+      - path: HiddenStart/Sources
+    info:
+      path: HiddenStart/Info.plist
+      properties:
+        LSUIElement: true
+        CFBundleName: HiddenStart
+        CFBundleDisplayName: HiddenStart
+        CFBundleIdentifier: com.mzeryani.HiddenStart
+        CFBundleShortVersionString: "1.0.0"
+        CFBundleVersion: "1"
+        NSHighResolutionCapable: true
+    entitlements:
+      path: HiddenStart/HiddenStart.entitlements
+    settings:
+      PRODUCT_BUNDLE_IDENTIFIER: com.mzeryani.HiddenStart
+      INFOPLIST_FILE: HiddenStart/Info.plist
+      CODE_SIGN_ENTITLEMENTS: HiddenStart/HiddenStart.entitlements
+
+  HiddenStartTests:
+    type: bundle.unit-test
+    platform: macOS
+    sources:
+      - path: HiddenStartTests
+    dependencies:
+      - target: HiddenStart
+    settings:
+      PRODUCT_BUNDLE_IDENTIFIER: com.mzeryani.HiddenStartTests
+      GENERATE_INFOPLIST_FILE: YES
