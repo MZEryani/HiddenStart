@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		03B40C37C3B675988E9B1CD5 /* WindowSuppressionEngineTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C6122D634691DD75BBF2B23E /* WindowSuppressionEngineTests.swift */; };
 		1E46846CDBEA5EBF92FA0D94 /* WindowSuppressionEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 65B3BDC172581C2EBAB87943 /* WindowSuppressionEngine.swift */; };
+		218AEB452D320D66A6BC14DF /* MockNetworkMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = FCFD597B5F61FADF40004603 /* MockNetworkMonitor.swift */; };
 		23207F8F192DC4CA9D4DDDFC /* SettingsStoring.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6EDF013EDBAF2A1BEDBFC3C4 /* SettingsStoring.swift */; };
 		2938D9FA365A3F41AF813E08 /* AppTerminating.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6ECCCF2E36AA5867013B8E32 /* AppTerminating.swift */; };
 		2F539C4EA53D2E06C68225A4 /* MockFocusGuard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 75426A210B52BDD8BB24B5A0 /* MockFocusGuard.swift */; };
@@ -18,24 +19,32 @@
 		3755600DECD4B39EDFDB21BD /* ApplicationPickerSelecting.swift in Sources */ = {isa = PBXBuildFile; fileRef = 75C3D88B266EE5249E076DDD /* ApplicationPickerSelecting.swift */; };
 		3FE6A37AF48BAE127477A38F /* StatusViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9F68D8A04212B3D862BCDBE2 /* StatusViewModel.swift */; };
 		47C3933872A94744E7D38A0E /* StatusItemController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50F39FB1970BA0BC860927BB /* StatusItemController.swift */; };
+		4C33E4D8ED877E576211B021 /* MockLaunchCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5646CBFD069D96CF2F5E898C /* MockLaunchCoordinator.swift */; };
 		56F4466E081F29309AFE82FB /* FocusGuardTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E4DBBC371D860A8CEFDA56FD /* FocusGuardTests.swift */; };
 		5773C857A5E55F50D93A775C /* ApplicationPicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = C05E2C73945C277AEB507C08 /* ApplicationPicker.swift */; };
+		5E14437A7CED7694B6F3926B /* NetworkMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 202E0B2E1BDAAD69ED22EDDB /* NetworkMonitor.swift */; };
 		7D306DC739F016A6F1C8B3C7 /* AppPreset.swift in Sources */ = {isa = PBXBuildFile; fileRef = 874A9AF25E2673CD20F49F08 /* AppPreset.swift */; };
 		820F889F69B362BB7E79845E /* MockWindowSuppressor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 716F3B1C0FC5385AFE754FE1 /* MockWindowSuppressor.swift */; };
 		85C9079C476115F1F135EF4A /* MockRunningApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = EC2C92870F007A9CC5CA0AEF /* MockRunningApp.swift */; };
 		868EA6D12789CDBFD8B346A7 /* ManagedApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2EF8E61ED6A6A25F7CA85BD7 /* ManagedApp.swift */; };
 		8D6D6BF4B6477396FB0097B3 /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1368407B9BE630D8F47FBAA0 /* main.swift */; };
+		92876BFBDC62BEFA861E88B9 /* AppInspectorSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = A8A14888546F174BE8B6F723 /* AppInspectorSheet.swift */; };
 		96020D6D2ED41BC2107E26B7 /* RunningAppRepresentable.swift in Sources */ = {isa = PBXBuildFile; fileRef = 18516F6F524DFC304443DBBD /* RunningAppRepresentable.swift */; };
 		9DC7F563F2390E1E58B94C01 /* StatusItemControllerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 01FB03F5450F4A10403D92BD /* StatusItemControllerTests.swift */; };
 		A7D3CA89DBFE25A8EA8856E0 /* WindowSuppressing.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1CDACF19F099C1C64357BEEA /* WindowSuppressing.swift */; };
+		AA3963EAD21AAE19BCA512FE /* LaunchCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 461DFF78701E3893824F529C /* LaunchCoordinator.swift */; };
 		AEBEA1C026E887B589DDCD2E /* StatusViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5694409F70B26B51C97EA918 /* StatusViewModelTests.swift */; };
+		BA7B9D974E602D314AE93885 /* LaunchCoordinating.swift in Sources */ = {isa = PBXBuildFile; fileRef = 442B3E737707CE3532126612 /* LaunchCoordinating.swift */; };
 		C12E687C11EB0155C16F2618 /* SettingsStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0E136AFDE4DD9E2EED715051 /* SettingsStore.swift */; };
 		C1F61FB900E2E401856010F2 /* MockApplicationPicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6801B49D58BD6020F6A041F6 /* MockApplicationPicker.swift */; };
+		C3B616F17CD3F9283AA00A37 /* NetworkMonitoring.swift in Sources */ = {isa = PBXBuildFile; fileRef = B3B8531BDC6F71EE3BBF93C3 /* NetworkMonitoring.swift */; };
 		C3F1B5116CCB2A0504D86CAF /* WorkspaceManaging.swift in Sources */ = {isa = PBXBuildFile; fileRef = F4193478EDCE6097EDFA0073 /* WorkspaceManaging.swift */; };
 		C8A52C32D7EEF1F01D44EA1D /* ManagedAppTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 658122A75EF833E7295C1CD3 /* ManagedAppTests.swift */; };
 		C912E9A7DFE1E5AC9271320F /* WorkspaceManagingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 07684E77E0152DA861A79118 /* WorkspaceManagingTests.swift */; };
 		CA6A8C5E5B63AC80552B8412 /* SettingsStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A242FB9A5C0F22F56B636115 /* SettingsStoreTests.swift */; };
+		CD47CD55C83DD3C64CA2CDE5 /* NetworkMonitorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9645DB28FCB47F1096EA7094 /* NetworkMonitorTests.swift */; };
 		CF8ADAED7792F9E3BA64426B /* FocusGuard.swift in Sources */ = {isa = PBXBuildFile; fileRef = BD417E7B9502DBE795FA0E11 /* FocusGuard.swift */; };
+		D1580443A5521618217078F1 /* LaunchCoordinatorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E726CE535CBDFFD9EB666592 /* LaunchCoordinatorTests.swift */; };
 		D88461F08798382E36244DAA /* ApplicationPickerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BDCCC5E483281D4332BB19F6 /* ApplicationPickerTests.swift */; };
 		FD677C15ADEE53A300FA7CE9 /* MockWorkspaceManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A9AC978E0D6290C4228A94E4 /* MockWorkspaceManager.swift */; };
 /* End PBXBuildFile section */
@@ -57,10 +66,14 @@
 		1368407B9BE630D8F47FBAA0 /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
 		18516F6F524DFC304443DBBD /* RunningAppRepresentable.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RunningAppRepresentable.swift; sourceTree = "<group>"; };
 		1CDACF19F099C1C64357BEEA /* WindowSuppressing.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WindowSuppressing.swift; sourceTree = "<group>"; };
+		202E0B2E1BDAAD69ED22EDDB /* NetworkMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetworkMonitor.swift; sourceTree = "<group>"; };
 		2EF8E61ED6A6A25F7CA85BD7 /* ManagedApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ManagedApp.swift; sourceTree = "<group>"; };
 		3A5A83C67A496BBF1BDE6F23 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
+		442B3E737707CE3532126612 /* LaunchCoordinating.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LaunchCoordinating.swift; sourceTree = "<group>"; };
+		461DFF78701E3893824F529C /* LaunchCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LaunchCoordinator.swift; sourceTree = "<group>"; };
 		4987F22BE523E03FC5A47C96 /* HiddenStart.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = HiddenStart.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		50F39FB1970BA0BC860927BB /* StatusItemController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatusItemController.swift; sourceTree = "<group>"; };
+		5646CBFD069D96CF2F5E898C /* MockLaunchCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockLaunchCoordinator.swift; sourceTree = "<group>"; };
 		5694409F70B26B51C97EA918 /* StatusViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatusViewModelTests.swift; sourceTree = "<group>"; };
 		5C430C549288EDFCE4985BE9 /* HiddenStartTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = HiddenStartTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		658122A75EF833E7295C1CD3 /* ManagedAppTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ManagedAppTests.swift; sourceTree = "<group>"; };
@@ -73,17 +86,22 @@
 		75426A210B52BDD8BB24B5A0 /* MockFocusGuard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockFocusGuard.swift; sourceTree = "<group>"; };
 		75C3D88B266EE5249E076DDD /* ApplicationPickerSelecting.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ApplicationPickerSelecting.swift; sourceTree = "<group>"; };
 		874A9AF25E2673CD20F49F08 /* AppPreset.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppPreset.swift; sourceTree = "<group>"; };
+		9645DB28FCB47F1096EA7094 /* NetworkMonitorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetworkMonitorTests.swift; sourceTree = "<group>"; };
 		9F68D8A04212B3D862BCDBE2 /* StatusViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatusViewModel.swift; sourceTree = "<group>"; };
 		A242FB9A5C0F22F56B636115 /* SettingsStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsStoreTests.swift; sourceTree = "<group>"; };
+		A8A14888546F174BE8B6F723 /* AppInspectorSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppInspectorSheet.swift; sourceTree = "<group>"; };
 		A9AC978E0D6290C4228A94E4 /* MockWorkspaceManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockWorkspaceManager.swift; sourceTree = "<group>"; };
+		B3B8531BDC6F71EE3BBF93C3 /* NetworkMonitoring.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetworkMonitoring.swift; sourceTree = "<group>"; };
 		BD417E7B9502DBE795FA0E11 /* FocusGuard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FocusGuard.swift; sourceTree = "<group>"; };
 		BDCCC5E483281D4332BB19F6 /* ApplicationPickerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ApplicationPickerTests.swift; sourceTree = "<group>"; };
 		C05E2C73945C277AEB507C08 /* ApplicationPicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ApplicationPicker.swift; sourceTree = "<group>"; };
 		C6122D634691DD75BBF2B23E /* WindowSuppressionEngineTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WindowSuppressionEngineTests.swift; sourceTree = "<group>"; };
 		E4DBBC371D860A8CEFDA56FD /* FocusGuardTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FocusGuardTests.swift; sourceTree = "<group>"; };
+		E726CE535CBDFFD9EB666592 /* LaunchCoordinatorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LaunchCoordinatorTests.swift; sourceTree = "<group>"; };
 		EC2C92870F007A9CC5CA0AEF /* MockRunningApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockRunningApp.swift; sourceTree = "<group>"; };
 		F4193478EDCE6097EDFA0073 /* WorkspaceManaging.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkspaceManaging.swift; sourceTree = "<group>"; };
 		F9AAFE4D9CFAC81F7E90E8AC /* FocusGuarding.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FocusGuarding.swift; sourceTree = "<group>"; };
+		FCFD597B5F61FADF40004603 /* MockNetworkMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockNetworkMonitor.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
@@ -127,6 +145,8 @@
 				75C3D88B266EE5249E076DDD /* ApplicationPickerSelecting.swift */,
 				6ECCCF2E36AA5867013B8E32 /* AppTerminating.swift */,
 				F9AAFE4D9CFAC81F7E90E8AC /* FocusGuarding.swift */,
+				442B3E737707CE3532126612 /* LaunchCoordinating.swift */,
+				B3B8531BDC6F71EE3BBF93C3 /* NetworkMonitoring.swift */,
 				18516F6F524DFC304443DBBD /* RunningAppRepresentable.swift */,
 				6EDF013EDBAF2A1BEDBFC3C4 /* SettingsStoring.swift */,
 				1CDACF19F099C1C64357BEEA /* WindowSuppressing.swift */,
@@ -140,6 +160,8 @@
 			children = (
 				6801B49D58BD6020F6A041F6 /* MockApplicationPicker.swift */,
 				75426A210B52BDD8BB24B5A0 /* MockFocusGuard.swift */,
+				5646CBFD069D96CF2F5E898C /* MockLaunchCoordinator.swift */,
+				FCFD597B5F61FADF40004603 /* MockNetworkMonitor.swift */,
 				EC2C92870F007A9CC5CA0AEF /* MockRunningApp.swift */,
 				716F3B1C0FC5385AFE754FE1 /* MockWindowSuppressor.swift */,
 				A9AC978E0D6290C4228A94E4 /* MockWorkspaceManager.swift */,
@@ -169,7 +191,9 @@
 			children = (
 				BDCCC5E483281D4332BB19F6 /* ApplicationPickerTests.swift */,
 				E4DBBC371D860A8CEFDA56FD /* FocusGuardTests.swift */,
+				E726CE535CBDFFD9EB666592 /* LaunchCoordinatorTests.swift */,
 				658122A75EF833E7295C1CD3 /* ManagedAppTests.swift */,
+				9645DB28FCB47F1096EA7094 /* NetworkMonitorTests.swift */,
 				A242FB9A5C0F22F56B636115 /* SettingsStoreTests.swift */,
 				01FB03F5450F4A10403D92BD /* StatusItemControllerTests.swift */,
 				5694409F70B26B51C97EA918 /* StatusViewModelTests.swift */,
@@ -183,6 +207,7 @@
 		F8A3991DAFF66E73D48408CB /* Views */ = {
 			isa = PBXGroup;
 			children = (
+				A8A14888546F174BE8B6F723 /* AppInspectorSheet.swift */,
 				71BA33AAF8262AD76EBC7540 /* PopoverContentView.swift */,
 			);
 			path = Views;
@@ -193,6 +218,8 @@
 			children = (
 				C05E2C73945C277AEB507C08 /* ApplicationPicker.swift */,
 				BD417E7B9502DBE795FA0E11 /* FocusGuard.swift */,
+				461DFF78701E3893824F529C /* LaunchCoordinator.swift */,
+				202E0B2E1BDAAD69ED22EDDB /* NetworkMonitor.swift */,
 				0E136AFDE4DD9E2EED715051 /* SettingsStore.swift */,
 				65B3BDC172581C2EBAB87943 /* WindowSuppressionEngine.swift */,
 			);
@@ -281,12 +308,16 @@
 			files = (
 				D88461F08798382E36244DAA /* ApplicationPickerTests.swift in Sources */,
 				56F4466E081F29309AFE82FB /* FocusGuardTests.swift in Sources */,
+				D1580443A5521618217078F1 /* LaunchCoordinatorTests.swift in Sources */,
 				C8A52C32D7EEF1F01D44EA1D /* ManagedAppTests.swift in Sources */,
 				C1F61FB900E2E401856010F2 /* MockApplicationPicker.swift in Sources */,
 				2F539C4EA53D2E06C68225A4 /* MockFocusGuard.swift in Sources */,
+				4C33E4D8ED877E576211B021 /* MockLaunchCoordinator.swift in Sources */,
+				218AEB452D320D66A6BC14DF /* MockNetworkMonitor.swift in Sources */,
 				85C9079C476115F1F135EF4A /* MockRunningApp.swift in Sources */,
 				820F889F69B362BB7E79845E /* MockWindowSuppressor.swift in Sources */,
 				FD677C15ADEE53A300FA7CE9 /* MockWorkspaceManager.swift in Sources */,
+				CD47CD55C83DD3C64CA2CDE5 /* NetworkMonitorTests.swift in Sources */,
 				CA6A8C5E5B63AC80552B8412 /* SettingsStoreTests.swift in Sources */,
 				9DC7F563F2390E1E58B94C01 /* StatusItemControllerTests.swift in Sources */,
 				AEBEA1C026E887B589DDCD2E /* StatusViewModelTests.swift in Sources */,
@@ -300,13 +331,18 @@
 			buildActionMask = 2147483647;
 			files = (
 				31279009B3F72712424A06F4 /* AppDelegate.swift in Sources */,
+				92876BFBDC62BEFA861E88B9 /* AppInspectorSheet.swift in Sources */,
 				7D306DC739F016A6F1C8B3C7 /* AppPreset.swift in Sources */,
 				2938D9FA365A3F41AF813E08 /* AppTerminating.swift in Sources */,
 				5773C857A5E55F50D93A775C /* ApplicationPicker.swift in Sources */,
 				3755600DECD4B39EDFDB21BD /* ApplicationPickerSelecting.swift in Sources */,
 				CF8ADAED7792F9E3BA64426B /* FocusGuard.swift in Sources */,
 				36BBCEA1DE22AD51C32405EB /* FocusGuarding.swift in Sources */,
+				BA7B9D974E602D314AE93885 /* LaunchCoordinating.swift in Sources */,
+				AA3963EAD21AAE19BCA512FE /* LaunchCoordinator.swift in Sources */,
 				868EA6D12789CDBFD8B346A7 /* ManagedApp.swift in Sources */,
+				5E14437A7CED7694B6F3926B /* NetworkMonitor.swift in Sources */,
+				C3B616F17CD3F9283AA00A37 /* NetworkMonitoring.swift in Sources */,
 				3570CCD122D4F059D16C9121 /* PopoverContentView.swift in Sources */,
 				96020D6D2ED41BC2107E26B7 /* RunningAppRepresentable.swift in Sources */,
 				C12E687C11EB0155C16F2618 /* SettingsStore.swift in Sources */,

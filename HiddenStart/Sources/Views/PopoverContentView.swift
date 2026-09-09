@@ -57,9 +57,18 @@ public struct PopoverContentView: View {
 
     private var statusView: some View {
         VStack(alignment: .leading, spacing: 4) {
-            Text("Status")
-                .font(.caption)
-                .foregroundColor(.secondary)
+            HStack {
+                Text("Status")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                Spacer()
+                if !viewModel.networkStatus.isEmpty {
+                    Text(viewModel.networkStatus)
+                        .font(.caption2)
+                        .fontWeight(.medium)
+                        .foregroundColor(networkStatusColor)
+                }
+            }
             Text(viewModel.statusMessage)
                 .font(.subheadline)
         }
@@ -67,6 +76,17 @@ public struct PopoverContentView: View {
         .padding(8)
         .background(Color(NSColor.controlBackgroundColor))
         .cornerRadius(6)
+    }
+
+    private var networkStatusColor: Color {
+        switch viewModel.networkStatus {
+        case "Network connected":
+            return .green
+        case "Skipped (Offline)":
+            return .orange
+        default:
+            return .secondary
+        }
     }
 
     private var managedAppsSection: some View {

@@ -7,6 +7,7 @@ public final class MockLaunchCoordinator: LaunchCoordinating {
     @Published public var remainingDelays: [UUID: Int] = [:]
     public var isRunning: Bool = false
     @Published public var statusSummary: String = "Ready"
+    @Published public var networkStatus: String = "Network connected"
 
     public var remainingDelaysPublisher: AnyPublisher<[UUID: Int], Never> {
         $remainingDelays.eraseToAnyPublisher()
@@ -14,6 +15,10 @@ public final class MockLaunchCoordinator: LaunchCoordinating {
 
     public var statusSummaryPublisher: AnyPublisher<String, Never> {
         $statusSummary.eraseToAnyPublisher()
+    }
+
+    public var networkStatusPublisher: AnyPublisher<String, Never> {
+        $networkStatus.eraseToAnyPublisher()
     }
 
     public var startStartupRunCallCount: Int = 0

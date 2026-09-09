@@ -33,9 +33,11 @@ struct LaunchCoordinatorTests {
             isEnabled: true
         )
 
+        let mockNetwork = MockNetworkMonitor(isConnected: true)
         let coordinator = LaunchCoordinator(
             workspaceManager: mockWorkspace,
             windowSuppressor: mockSuppressor,
+            networkMonitor: mockNetwork,
             sleep: { _ in }
         )
 
@@ -78,10 +80,12 @@ struct LaunchCoordinatorTests {
     func schedulesDelaysConcurrently() async throws {
         let mockWorkspace = MockWorkspaceManager()
         let mockSuppressor = MockWindowSuppressor()
+        let mockNetwork = MockNetworkMonitor(isConnected: true)
 
         let coordinator = LaunchCoordinator(
             workspaceManager: mockWorkspace,
             windowSuppressor: mockSuppressor,
+            networkMonitor: mockNetwork,
             sleep: { _ in
                 // Yield to allow coordinator state inspection
                 await Task.yield()
@@ -175,5 +179,345 @@ struct LaunchCoordinatorTests {
         #expect(coordinator.isRunning == false)
         #expect(coordinator.remainingDelays.isEmpty)
         #expect(mockSuppressor.launchedApps.isEmpty)
+    }
+
+    @Test("App with waitForInternet launches immediately when network is already connected")
+    func onlineNetworkGatedAppLaunches() async throws {
+        let mockWorkspace = MockWorkspaceManager()
+        let mockSuppressor = MockWindowSuppressor()
+        let mockNetwork = MockNetworkMonitor(isConnected: true)
+
+        let coordinator = LaunchCoordinator(
+            workspaceManager: mockWorkspace,
+            windowSuppressor: mockSuppressor,
+            networkMonitor: mockNetwork,
+            sleep: { _ in }
+        )
+
+        let app = ManagedApp(
+            name: "Discord",
+            bundlePath: "/Applications/Discord.app",
+            delaySeconds: 0,
+            waitForInternet: true,
+            isEnabled: true
+        )
+
+        coordinator.startStartupRun(for: [app])
+        await Task.yield()
+
+        #expect(coordinator.networkStatus == "Network connected")
+        #expect(mockSuppressor.launchedApps.count == 1)
+        #expect(mockSuppressor.launchedApps.first?.id == app.id)
+    }
+
+    @Test("Network conjunction: app waits for network when offline, then launches on connect")
+    func networkConjunctionWaitsThenLaunches() async throws {
+        let mockWorkspace = MockWorkspaceManager()
+        let mockSuppressor = MockWindowSuppressor()
+        let mockNetwork = MockNetworkMonitor(isConnected: false)
+
+        let coordinator = LaunchCoordinator(
+            workspaceManager: mockWorkspace,
+            windowSuppressor: mockSuppressor,
+            networkMonitor: mockNetwork,
+            offlineTimeout: .seconds(60),
+            sleep: { _ in }
+        )
+
+        let app = ManagedApp(
+            name: "Discord",
+            bundlePath: "/Applications/Discord.app",
+            delaySeconds: 0,
+            waitForInternet: true,
+            isEnabled: true
+        )
+
+        coordinator.startStartupRun(for: [app])
+        await Task.yield()
+
+        #expect(coordinator.networkStatus == "Waiting for network...")
+        #expect(coordinator.statusSummary == "Waiting for network...")
+        #expect(mockSuppressor.launchedApps.isEmpty)
+
+        // Simulate network reconnecting
+        mockNetwork.simulateNetworkChange(isConnected: true)
+        await Task.yield()
+
+        #expect(coordinator.networkStatus == "Network connected")
+        #expect(mockSuppressor.launchedApps.count == 1)
+        #expect(mockSuppressor.launchedApps.first?.id == app.id)
+    }
+
+    @Test("Non-gated app launches even when network is offline")
+    func nonGatedAppLaunchesOffline() async throws {
+        let mockWorkspace = MockWorkspaceManager()
+        let mockSuppressor = MockWindowSuppressor()
+        let mockNetwork = MockNetworkMonitor(isConnected: false)
+
+        let coordinator = LaunchCoordinator(
+            workspaceManager: mockWorkspace,
+            windowSuppressor: mockSuppressor,
+            networkMonitor: mockNetwork,
+            sleep: { _ in }
+        )
+
+        let app = ManagedApp(
+            name: "Calculator",
+            bundlePath: "/Applications/Calculator.app",
+            delaySeconds: 0,
+            waitForInternet: false,
+            isEnabled: true
+        )
+
+        coordinator.startStartupRun(for: [app])
+        await Task.yield()
+
+        #expect(mockSuppressor.launchedApps.count == 1)
+        #expect(mockSuppressor.launchedApps.first?.id == app.id)
+    }
+
+    @Test("Offline fail-safe timeout skips gated apps after timeout and sets status to Skipped (Offline)")
+    func offlineTimeoutSkipsGatedApps() async throws {
+        let mockWorkspace = MockWorkspaceManager()
+        let mockSuppressor = MockWindowSuppressor()
+        let mockNetwork = MockNetworkMonitor(isConnected: false)
+
+        let coordinator = LaunchCoordinator(
+            workspaceManager: mockWorkspace,
+            windowSuppressor: mockSuppressor,
+            networkMonitor: mockNetwork,
+            offlineTimeout: .milliseconds(20),
+            deferredRetryDuration: .seconds(900),
+            sleep: { duration in
+                try await Task.sleep(for: duration)
+            }
+        )
+
+        let app = ManagedApp(
+            name: "Discord",
+            bundlePath: "/Applications/Discord.app",
+            delaySeconds: 0,
+            waitForInternet: true,
+            isEnabled: true
+        )
+
+        coordinator.startStartupRun(for: [app])
+        #expect(coordinator.networkStatus == "Waiting for network...")
+
+        // Wait for offline timeout to fire
+        try await Task.sleep(for: .milliseconds(50))
+
+        #expect(coordinator.networkStatus == "Skipped (Offline)")
+        #expect(coordinator.statusSummary == "Skipped (Offline)")
+        #expect(mockSuppressor.launchedApps.isEmpty)
+        #expect(coordinator.isRunning == false)
+    }
+
+    @Test("Deferred retry triggers skipped gated apps when network reconnects within retry window")
+    func deferredRetryTriggersOnReconnect() async throws {
+        let mockWorkspace = MockWorkspaceManager()
+        let mockSuppressor = MockWindowSuppressor()
+        let mockNetwork = MockNetworkMonitor(isConnected: false)
+
+        let coordinator = LaunchCoordinator(
+            workspaceManager: mockWorkspace,
+            windowSuppressor: mockSuppressor,
+            networkMonitor: mockNetwork,
+            offlineTimeout: .milliseconds(20),
+            deferredRetryDuration: .milliseconds(200),
+            sleep: { duration in
+                try await Task.sleep(for: duration)
+            }
+        )
+
+        let app = ManagedApp(
+            name: "Steam",
+            bundlePath: "/Applications/Steam.app",
+            delaySeconds: 0,
+            waitForInternet: true,
+            isEnabled: true
+        )
+
+        coordinator.startStartupRun(for: [app])
+
+        // Wait for offline timeout to fire and skip app
+        try await Task.sleep(for: .milliseconds(50))
+        #expect(coordinator.networkStatus == "Skipped (Offline)")
+        #expect(mockSuppressor.launchedApps.isEmpty)
+
+        // Now within the deferred retry window, simulate network reconnection
+        mockNetwork.simulateNetworkChange(isConnected: true)
+        try await Task.sleep(for: .milliseconds(30))
+
+        #expect(coordinator.networkStatus == "Network connected")
+        #expect(mockSuppressor.launchedApps.count == 1)
+        #expect(mockSuppressor.launchedApps.first?.id == app.id)
+    }
+
+    @Test("Deferred retry observer cleanly expires after window without launching")
+    func deferredRetryObserverCleanlyExpires() async throws {
+        let mockWorkspace = MockWorkspaceManager()
+        let mockSuppressor = MockWindowSuppressor()
+        let mockNetwork = MockNetworkMonitor(isConnected: false)
+
+        let coordinator = LaunchCoordinator(
+            workspaceManager: mockWorkspace,
+            windowSuppressor: mockSuppressor,
+            networkMonitor: mockNetwork,
+            offlineTimeout: .milliseconds(20),
+            deferredRetryDuration: .milliseconds(40),
+            sleep: { duration in
+                try await Task.sleep(for: duration)
+            }
+        )
+
+        let app = ManagedApp(
+            name: "Discord",
+            bundlePath: "/Applications/Discord.app",
+            delaySeconds: 0,
+            waitForInternet: true,
+            isEnabled: true
+        )
+
+        coordinator.startStartupRun(for: [app])
+
+        // Wait for offline timeout (20ms) + deferred retry window (40ms) to fully expire
+        try await Task.sleep(for: .milliseconds(100))
+
+        #expect(coordinator.networkStatus == "Skipped (Offline)")
+        // Connecting AFTER the deferred retry window expired should NOT trigger launch
+        mockNetwork.simulateNetworkChange(isConnected: true)
+        try await Task.sleep(for: .milliseconds(30))
+
+        #expect(mockSuppressor.launchedApps.isEmpty)
+        #expect(mockNetwork.stopMonitoringCallCount >= 1)
+    }
+
+    @Test("Conjunction: when network connects before delay finishes, launch occurs at delay end")
+    func conjunctionNetworkConnectsBeforeDelayFinishes() async throws {
+        let mockWorkspace = MockWorkspaceManager()
+        let mockSuppressor = MockWindowSuppressor()
+        let mockNetwork = MockNetworkMonitor(isConnected: false)
+
+        final class DelayCounter: @unchecked Sendable {
+            let lock = NSLock()
+            var count = 0
+            func increment() -> Int {
+                lock.lock()
+                defer { lock.unlock() }
+                count += 1
+                return count
+            }
+        }
+        let counter = DelayCounter()
+
+        let coordinator = LaunchCoordinator(
+            workspaceManager: mockWorkspace,
+            windowSuppressor: mockSuppressor,
+            networkMonitor: mockNetwork,
+            offlineTimeout: .seconds(60),
+            sleep: { _ in
+                let current = counter.increment()
+                if current == 1 {
+                    // Connect midway through delay
+                    await MainActor.run {
+                        mockNetwork.simulateNetworkChange(isConnected: true)
+                    }
+                }
+                await Task.yield()
+            }
+        )
+
+        let app = ManagedApp(
+            name: "Discord",
+            bundlePath: "/Applications/Discord.app",
+            delaySeconds: 2,
+            waitForInternet: true,
+            isEnabled: true
+        )
+
+        coordinator.startStartupRun(for: [app])
+
+        while coordinator.isRunning {
+            await Task.yield()
+        }
+
+        #expect(mockSuppressor.launchedApps.count == 1)
+        #expect(mockSuppressor.launchedApps.first?.id == app.id)
+        #expect(coordinator.networkStatus == "Network connected")
+    }
+
+    @Test("Conjunction: when delay finishes before network connects, launch waits for network")
+    func conjunctionDelayFinishesBeforeNetworkConnects() async throws {
+        let mockWorkspace = MockWorkspaceManager()
+        let mockSuppressor = MockWindowSuppressor()
+        let mockNetwork = MockNetworkMonitor(isConnected: false)
+
+        let coordinator = LaunchCoordinator(
+            workspaceManager: mockWorkspace,
+            windowSuppressor: mockSuppressor,
+            networkMonitor: mockNetwork,
+            offlineTimeout: .seconds(60),
+            sleep: { _ in
+                await Task.yield()
+            }
+        )
+
+        let app = ManagedApp(
+            name: "Steam",
+            bundlePath: "/Applications/Steam.app",
+            delaySeconds: 1,
+            waitForInternet: true,
+            isEnabled: true
+        )
+
+        coordinator.startStartupRun(for: [app])
+
+        // Allow delay of 1s to tick down to 0
+        while coordinator.remainingDelays[app.id] != nil {
+            await Task.yield()
+        }
+
+        // App should be waiting for network, not launched yet
+        #expect(coordinator.remainingDelays[app.id] == nil)
+        #expect(coordinator.statusSummary == "Waiting for network...")
+        #expect(mockSuppressor.launchedApps.isEmpty)
+
+        // Now connect network
+        mockNetwork.simulateNetworkChange(isConnected: true)
+        await Task.yield()
+
+        #expect(mockSuppressor.launchedApps.count == 1)
+        #expect(mockSuppressor.launchedApps.first?.id == app.id)
+        #expect(coordinator.networkStatus == "Network connected")
+    }
+
+    @Test("cancelAll cleanly stops network monitoring")
+    func cancelAllStopsNetworkMonitoring() async throws {
+        let mockWorkspace = MockWorkspaceManager()
+        let mockSuppressor = MockWindowSuppressor()
+        let mockNetwork = MockNetworkMonitor(isConnected: false)
+
+        let coordinator = LaunchCoordinator(
+            workspaceManager: mockWorkspace,
+            windowSuppressor: mockSuppressor,
+            networkMonitor: mockNetwork,
+            sleep: { _ in try await Task.sleep(for: .seconds(100)) }
+        )
+
+        let app = ManagedApp(
+            name: "Discord",
+            bundlePath: "/Applications/Discord.app",
+            delaySeconds: 10,
+            waitForInternet: true,
+            isEnabled: true
+        )
+
+        coordinator.startStartupRun(for: [app])
+        #expect(mockNetwork.startMonitoringCallCount == 1)
+        let stopsBefore = mockNetwork.stopMonitoringCallCount
+
+        coordinator.cancelAll()
+        #expect(mockNetwork.stopMonitoringCallCount == stopsBefore + 1)
     }
 }

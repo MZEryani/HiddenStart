@@ -246,5 +246,25 @@ struct StatusViewModelTests {
         #expect(viewModel.remainingDelays[id] == 5)
         #expect(viewModel.statusMessage == "Discord in 5s")
     }
+
+    @Test("Coordinator networkStatus updates viewModel networkStatus and statusMessage")
+    func networkStatusUpdatesViewModel() async {
+        let coordinator = MockLaunchCoordinator()
+        let viewModel = StatusViewModel(launchCoordinator: coordinator)
+
+        #expect(viewModel.networkStatus == "Network connected")
+
+        coordinator.networkStatus = "Waiting for network..."
+        await Task.yield()
+
+        #expect(viewModel.networkStatus == "Waiting for network...")
+
+        coordinator.statusSummary = "Skipped (Offline)"
+        coordinator.networkStatus = "Skipped (Offline)"
+        await Task.yield()
+
+        #expect(viewModel.networkStatus == "Skipped (Offline)")
+        #expect(viewModel.statusMessage == "Skipped (Offline)")
+    }
 }
 #endif

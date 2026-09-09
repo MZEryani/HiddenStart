@@ -6,6 +6,7 @@ import AppKit
 public final class StatusViewModel: ObservableObject {
     public let title: String
     @Published public var statusMessage: String
+    @Published public var networkStatus: String
     @Published public var managedApps: [ManagedApp] = []
     @Published public var remainingDelays: [UUID: Int] = [:]
 
@@ -25,6 +26,7 @@ public final class StatusViewModel: ObservableObject {
         workspaceManager: WorkspaceManaging? = nil,
         appPicker: ApplicationPickerSelecting? = nil,
         windowSuppressor: WindowSuppressing? = nil,
+        networkMonitor: NetworkMonitoring? = nil,
         launchCoordinator: LaunchCoordinating? = nil
     ) {
         self.title = title
@@ -41,9 +43,11 @@ public final class StatusViewModel: ObservableObject {
 
         let resolvedCoordinator = launchCoordinator ?? LaunchCoordinator(
             workspaceManager: resolvedWorkspace,
-            windowSuppressor: resolvedSuppressor
+            windowSuppressor: resolvedSuppressor,
+            networkMonitor: networkMonitor
         )
         self.launchCoordinator = resolvedCoordinator
+        self.networkStatus = resolvedCoordinator.networkStatus
 
         if settingsStore == nil {
             try? resolvedStore.load()
@@ -62,9 +66,17 @@ public final class StatusViewModel: ObservableObject {
             .receive(on: RunLoop.main)
             .sink { [weak self] summary in
                 guard let self else { return }
-                if self.launchCoordinator.isRunning || summary == "Ready" {
+                if self.launchCoordinator.isRunning || summary == "Ready" || summary == "Skipped (Offline)" || summary == "Waiting for network..." {
                     self.statusMessage = summary
                 }
+            }
+            .store(in: &cancellables)
+
+        resolvedCoordinator.networkStatusPublisher
+            .receive(on: RunLoop.main)
+            .sink { [weak self] status in
+                guard let self else { return }
+                self.networkStatus = status
             }
             .store(in: &cancellables)
     }
