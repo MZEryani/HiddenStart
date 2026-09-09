@@ -614,5 +614,95 @@ struct LaunchCoordinatorTests {
         #expect(mockSuppressor.launchedApps.isEmpty)
         #expect(coordinator.isRunning == false)
     }
+
+    @Test("Concurrent network-gated apps completing delay both launch and register in suppressor")
+    func concurrentNetworkGatedAppsBothLaunch() async throws {
+        let mockWorkspace = MockWorkspaceManager()
+        let mockSuppressor = MockWindowSuppressor()
+        let mockNetwork = MockNetworkMonitor(isConnected: true)
+
+        let app1 = ManagedApp(
+            name: "Discord",
+            bundlePath: "/Applications/Discord.app",
+            bundleIdentifier: "com.hnc.Discord",
+            delaySeconds: 0,
+            waitForInternet: true,
+            isEnabled: true
+        )
+        let app2 = ManagedApp(
+            name: "Antigravity",
+            bundlePath: "/Applications/Antigravity.app",
+            bundleIdentifier: "com.google.antigravity",
+            delaySeconds: 0,
+            waitForInternet: true,
+            isEnabled: true
+        )
+
+        let coordinator = LaunchCoordinator(
+            workspaceManager: mockWorkspace,
+            windowSuppressor: mockSuppressor,
+            networkMonitor: mockNetwork,
+            sleep: { _ in }
+        )
+
+        coordinator.startStartupRun(for: [app1, app2])
+        try await Task.sleep(for: .milliseconds(30))
+
+        #expect(mockSuppressor.launchedApps.count == 2)
+        #expect(mockSuppressor.launchedApps.contains { $0.id == app1.id })
+        #expect(mockSuppressor.launchedApps.contains { $0.id == app2.id })
+    }
+
+    @Test("Cancelling a launched app cancels suppression for that specific process identifier")
+    func cancelLaunchCancelsSuppressorForProcess() async throws {
+        let mockWorkspace = MockWorkspaceManager()
+        let mockSuppressor = MockWindowSuppressor()
+        let mockNetwork = MockNetworkMonitor(isConnected: true)
+
+        let app = ManagedApp(
+            name: "Discord",
+            bundlePath: "/Applications/Discord.app",
+            bundleIdentifier: "com.hnc.Discord",
+            delaySeconds: 0,
+            waitForInternet: false,
+            isEnabled: true
+        )
+
+        mockSuppressor.stubbedRunningApp = MockRunningApp(processIdentifier: 8877)
+
+        let coordinator = LaunchCoordinator(
+            workspaceManager: mockWorkspace,
+            windowSuppressor: mockSuppressor,
+            networkMonitor: mockNetwork,
+            sleep: { _ in }
+        )
+
+        coordinator.startStartupRun(for: [app])
+        try await Task.sleep(for: .milliseconds(30))
+
+        #expect(mockSuppressor.launchedApps.count == 1)
+
+        coordinator.cancelLaunch(for: app.id)
+
+        #expect(mockSuppressor.cancelledPids == [8877])
+    }
+
+    @Test("CancelAll delegates cancelAll to window suppressor")
+    func cancelAllDelegatesToSuppressor() {
+        let mockWorkspace = MockWorkspaceManager()
+        let mockSuppressor = MockWindowSuppressor()
+        let mockNetwork = MockNetworkMonitor(isConnected: true)
+
+        let coordinator = LaunchCoordinator(
+            workspaceManager: mockWorkspace,
+            windowSuppressor: mockSuppressor,
+            networkMonitor: mockNetwork,
+            sleep: { _ in }
+        )
+
+        coordinator.cancelAll()
+
+        #expect(mockSuppressor.cancelAllCallCount == 1)
+    }
 }
 

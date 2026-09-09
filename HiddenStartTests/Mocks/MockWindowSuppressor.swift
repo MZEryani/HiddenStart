@@ -6,6 +6,8 @@ public final class MockWindowSuppressor: WindowSuppressing {
     public var launchedApps: [ManagedApp] = []
     public var shouldThrowError: Error?
     public var stubbedRunningApp: any RunningAppRepresentable = MockRunningApp()
+    public var cancelledPids: [pid_t] = []
+    public var cancelAllCallCount: Int = 0
 
     public init() {}
 
@@ -16,5 +18,13 @@ public final class MockWindowSuppressor: WindowSuppressing {
         }
         launchedApps.append(app)
         return stubbedRunningApp
+    }
+
+    public func cancel(processIdentifier: pid_t) {
+        cancelledPids.append(processIdentifier)
+    }
+
+    public func cancelAll() {
+        cancelAllCallCount += 1
     }
 }

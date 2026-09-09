@@ -50,4 +50,12 @@ public final class WindowSuppressionEngine: WindowSuppressing {
 
         return runningApp
     }
+
+    public func cancel(processIdentifier: pid_t) {
+        focusGuard.cancel(processIdentifier: processIdentifier)
+    }
+
+    public func cancelAll() {
+        focusGuard.cancel()
+    }
 }

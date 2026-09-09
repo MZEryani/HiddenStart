@@ -156,4 +156,70 @@ struct AppResolverTests {
 
         try? FileManager.default.removeItem(at: tempDir)
     }
+
+    @Test("AppPreset recognizes modern Discord bundle identifier com.hnc.discord case-insensitively")
+    func testModernDiscordPresetRecognition() {
+        let presetConfig = AppPreset.knownPresets["com.hnc.discord"]
+        #expect(presetConfig != nil)
+        #expect(presetConfig?.customArguments == "--start-minimized")
+        #expect(presetConfig?.waitForInternet == true)
+        #expect(presetConfig?.launchHidden == true)
+
+        let defaultArgs = AppPreset.defaultArguments(forBundleId: "COM.HNC.DISCORD")
+        #expect(defaultArgs == "--start-minimized")
+
+        let managedApp = AppPreset.makeManagedApp(
+            name: "Discord",
+            bundlePath: "/Applications/Discord.app",
+            bundleIdentifier: "com.hnc.Discord"
+        )
+        #expect(managedApp.customArguments == "--start-minimized")
+        #expect(managedApp.waitForInternet == true)
+        #expect(managedApp.launchHidden == true)
+    }
+
+    @Test("resolveAndHeal backfills empty customArguments for existing app with preset and persists to store")
+    func testResolveAndHealBackfillsEmptyPresetArguments() throws {
+        let tempDir = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        let storeURL = tempDir.appendingPathComponent("apps.json")
+        let store = SettingsStore(fileURL: storeURL)
+
+        // Existing Discord app saved without arguments
+        let existingDiscord = ManagedApp(
+            name: "Discord",
+            bundlePath: "/Applications/Discord.app",
+            bundleIdentifier: "com.hnc.Discord",
+            customArguments: ""
+        )
+        // Existing app with custom user-supplied arguments that should NOT be overwritten
+        let customApp = ManagedApp(
+            name: "Discord Custom",
+            bundlePath: "/Applications/Discord.app",
+            bundleIdentifier: "com.hnc.Discord",
+            customArguments: "--custom-flag"
+        )
+
+        try store.add(existingDiscord)
+        try store.add(customApp)
+
+        let mockWorkspace = MockWorkspaceManager()
+        let resolver = AppResolver(
+            workspaceManager: mockWorkspace,
+            fileExistsChecker: { $0 == "/Applications/Discord.app" }
+        )
+
+        let resolved = resolver.resolveAndHeal(apps: store.apps, store: store)
+
+        #expect(resolved.count == 2)
+        #expect(resolved[0].customArguments == "--start-minimized")
+        #expect(resolved[1].customArguments == "--custom-flag")
+
+        let storedDiscord = store.apps.first { $0.id == existingDiscord.id }
+        #expect(storedDiscord?.customArguments == "--start-minimized")
+
+        let storedCustom = store.apps.first { $0.id == customApp.id }
+        #expect(storedCustom?.customArguments == "--custom-flag")
+
+        try? FileManager.default.removeItem(at: tempDir)
+    }
 }

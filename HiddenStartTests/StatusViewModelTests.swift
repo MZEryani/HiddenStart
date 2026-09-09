@@ -384,5 +384,43 @@ struct StatusViewModelTests {
         #expect(viewModel.statusMessage == "Launch failed: Application not found")
         #expect(viewModel.isAppMissing(missingApp) == true)
     }
+
+    @Test("Startup run resolves and heals multiple managed apps before launching")
+    func startupRunHealsAndLaunchesMultipleApps() {
+        let discord = ManagedApp(
+            name: "Discord",
+            bundlePath: "/Applications/Discord.app",
+            bundleIdentifier: "com.hnc.Discord",
+            customArguments: ""
+        )
+        let antigravity = ManagedApp(
+            name: "Antigravity",
+            bundlePath: "/Applications/Antigravity.app",
+            bundleIdentifier: "com.google.antigravity",
+            customArguments: ""
+        )
+        let store = MockSettingsStore(apps: [discord, antigravity])
+        let coordinator = MockLaunchCoordinator()
+        let mockWorkspace = MockWorkspaceManager()
+
+        let resolver = AppResolver(
+            workspaceManager: mockWorkspace,
+            fileExistsChecker: { _ in true }
+        )
+
+        let viewModel = StatusViewModel(
+            settingsStore: store,
+            workspaceManager: mockWorkspace,
+            appResolver: resolver,
+            launchCoordinator: coordinator
+        )
+
+        viewModel.startStartupRun()
+
+        #expect(coordinator.startStartupRunCallCount == 1)
+        #expect(coordinator.lastAppsStarted.count == 2)
+        // Discord should have healed preset arguments backfilled
+        #expect(viewModel.managedApps.first { $0.bundleIdentifier == "com.hnc.Discord" }?.customArguments == "--start-minimized")
+    }
 }
 #endif

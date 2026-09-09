@@ -180,4 +180,49 @@ struct WindowSuppressionEngineTests {
 
         #expect(mockGuard.guardedApps.isEmpty)
     }
+
+    @Test("Launching multiple hidden apps guards all processes concurrently")
+    func concurrentHiddenAppLaunchesGuardAll() async throws {
+        let mockWorkspace = MockWorkspaceManager()
+        let mockGuard = MockFocusGuard()
+        let app1Running = MockRunningApp(processIdentifier: 1111, isFinishedLaunching: true)
+        let app2Running = MockRunningApp(processIdentifier: 2222, isFinishedLaunching: true)
+
+        let engine = WindowSuppressionEngine(
+            workspaceManager: mockWorkspace,
+            focusGuard: mockGuard,
+            pollingInterval: .milliseconds(10),
+            pollingTimeout: .milliseconds(50),
+            sleep: { _ in }
+        )
+
+        let app1 = ManagedApp(name: "AppOne", bundlePath: "/Applications/AppOne.app", launchHidden: true)
+        let app2 = ManagedApp(name: "AppTwo", bundlePath: "/Applications/AppTwo.app", launchHidden: true)
+
+        mockWorkspace.stubbedRunningApp = app1Running
+        _ = try await engine.launch(app: app1)
+
+        mockWorkspace.stubbedRunningApp = app2Running
+        _ = try await engine.launch(app: app2)
+
+        #expect(mockGuard.isGuarding(processIdentifier: 1111))
+        #expect(mockGuard.isGuarding(processIdentifier: 2222))
+        #expect(mockGuard.isGuarding)
+    }
+
+    @Test("Cancel and cancelAll forward directly to focus guard")
+    func cancelForwardsToFocusGuard() {
+        let mockWorkspace = MockWorkspaceManager()
+        let mockGuard = MockFocusGuard()
+        let engine = WindowSuppressionEngine(
+            workspaceManager: mockWorkspace,
+            focusGuard: mockGuard
+        )
+
+        engine.cancel(processIdentifier: 1234)
+        #expect(mockGuard.cancelledPids == [1234])
+
+        engine.cancelAll()
+        #expect(mockGuard.cancelCallCount == 1)
+    }
 }

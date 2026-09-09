@@ -71,6 +71,7 @@ public final class LaunchCoordinator: ObservableObject, LaunchCoordinating {
 
     private var tasks: [UUID: Task<Void, Never>] = [:]
     private var registeredApps: [UUID: ManagedApp] = [:]
+    private var launchedPids: [UUID: pid_t] = [:]
     private var waitingForNetworkApps: Set<UUID> = []
     private var skippedGatedApps: [ManagedApp] = []
     private var offlineTimeoutTask: Task<Void, Never>?
@@ -226,6 +227,9 @@ public final class LaunchCoordinator: ObservableObject, LaunchCoordinating {
         if let task = tasks.removeValue(forKey: appWithId) {
             task.cancel()
         }
+        if let pid = launchedPids.removeValue(forKey: appWithId) {
+            windowSuppressor.cancel(processIdentifier: pid)
+        }
         remainingDelays.removeValue(forKey: appWithId)
         waitingForNetworkApps.remove(appWithId)
         skippedGatedApps.removeAll(where: { $0.id == appWithId })
@@ -244,6 +248,8 @@ public final class LaunchCoordinator: ObservableObject, LaunchCoordinating {
             task.cancel()
         }
         tasks.removeAll()
+        windowSuppressor.cancelAll()
+        launchedPids.removeAll()
         remainingDelays.removeAll()
         waitingForNetworkApps.removeAll()
         skippedGatedApps.removeAll()
@@ -434,15 +440,21 @@ public final class LaunchCoordinator: ObservableObject, LaunchCoordinating {
             let resolution = appResolver.resolveApp(app)
             switch resolution {
             case .valid(let validApp):
-                _ = try? await self.windowSuppressor.launch(app: validApp)
+                if let running = try? await self.windowSuppressor.launch(app: validApp) {
+                    self.launchedPids[app.id] = running.processIdentifier
+                }
             case .healed(let healedApp):
                 try? self.settingsStore?.update(healedApp)
-                _ = try? await self.windowSuppressor.launch(app: healedApp)
+                if let running = try? await self.windowSuppressor.launch(app: healedApp) {
+                    self.launchedPids[app.id] = running.processIdentifier
+                }
             case .missing:
                 break
             }
         } else {
-            _ = try? await self.windowSuppressor.launch(app: app)
+            if let running = try? await self.windowSuppressor.launch(app: app) {
+                self.launchedPids[app.id] = running.processIdentifier
+            }
         }
     }
 }

@@ -8,13 +8,16 @@ public struct PresetConfiguration: Sendable {
 }
 
 public enum AppPreset {
+    private static let discordPreset = PresetConfiguration(
+        customArguments: "--start-minimized",
+        waitForInternet: true,
+        launchHidden: true,
+        maxDelaySeconds: nil
+    )
+
     public static let knownPresets: [String: PresetConfiguration] = [
-        "com.hammerandchisel.discord": PresetConfiguration(
-            customArguments: "--start-minimized",
-            waitForInternet: true,
-            launchHidden: true,
-            maxDelaySeconds: nil
-        ),
+        "com.hammerandchisel.discord": discordPreset,
+        "com.hnc.discord": discordPreset,
         "com.valvesoftware.steam": PresetConfiguration(
             customArguments: "-silent",
             waitForInternet: true,

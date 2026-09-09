@@ -42,15 +42,29 @@ public final class AppResolver: AppResolving {
     public func resolveAndHeal(apps: [ManagedApp], store: SettingsStoring?) -> [ManagedApp] {
         var results: [ManagedApp] = []
         for app in apps {
-            switch resolveApp(app) {
+            var currentApp = app
+            var wasHealed = false
+
+            switch resolveApp(currentApp) {
             case .valid(let validApp):
-                results.append(validApp)
+                currentApp = validApp
             case .healed(let healedApp):
-                try? store?.update(healedApp)
-                results.append(healedApp)
+                currentApp = healedApp
+                wasHealed = true
             case .missing(let missingApp):
-                results.append(missingApp)
+                currentApp = missingApp
             }
+
+            if currentApp.customArguments.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+               let defaultArgs = AppPreset.defaultArguments(forBundleId: currentApp.bundleIdentifier) {
+                currentApp.customArguments = defaultArgs
+                wasHealed = true
+            }
+
+            if wasHealed {
+                try? store?.update(currentApp)
+            }
+            results.append(currentApp)
         }
         return results
     }

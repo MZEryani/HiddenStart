@@ -7,6 +7,8 @@ DerivedData/
 
 # Swift Package Manager
 .build/
+.swiftpm/
+.derivedData/
 
 # macOS
 .DS_Store
