@@ -18,21 +18,35 @@ public enum BundleAppResolver {
 
 @MainActor
 public final class ApplicationPicker: ApplicationPickerSelecting {
-    public init() {}
+    private let appActivator: @MainActor (Bool) -> Void
+    private let panelFactory: @MainActor () -> NSOpenPanel
+    private let panelPresenter: @MainActor (NSOpenPanel) async -> (NSApplication.ModalResponse, URL?)
+
+    public init(
+        appActivator: @escaping @MainActor (Bool) -> Void = { NSApp.activate(ignoringOtherApps: $0) },
+        panelFactory: @escaping @MainActor () -> NSOpenPanel = { NSOpenPanel() },
+        panelPresenter: @escaping @MainActor (NSOpenPanel) async -> (NSApplication.ModalResponse, URL?) = { (await $0.begin(), $0.url) }
+    ) {
+        self.appActivator = appActivator
+        self.panelFactory = panelFactory
+        self.panelPresenter = panelPresenter
+    }
 
     public func pickApplication() async -> ManagedApp? {
-        let panel = NSOpenPanel()
+        appActivator(true)
+
+        let panel = panelFactory()
         panel.title = "Select Application to Manage"
-        panel.showsResizeIndicator = true
         panel.showsHiddenFiles = false
         panel.canChooseDirectories = false
         panel.canCreateDirectories = false
         panel.allowsMultipleSelection = false
+        panel.treatsFilePackagesAsDirectories = false
         panel.allowedContentTypes = [.applicationBundle]
         panel.directoryURL = URL(fileURLWithPath: "/Applications")
 
-        let response = await panel.begin()
-        guard response == .OK, let url = panel.url else {
+        let (response, chosenURL) = await panelPresenter(panel)
+        guard response == .OK, let url = chosenURL else {
             return nil
         }
 

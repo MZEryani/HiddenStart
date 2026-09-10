@@ -29,13 +29,17 @@ public final class StatusItemController: NSObject, NSMenuDelegate {
         } else {
             let standardPopover = NSPopover()
             standardPopover.behavior = .applicationDefined
-            standardPopover.contentViewController = NSHostingController(
-                rootView: PopoverContentView(viewModel: viewModel)
-            )
             self.popover = standardPopover
         }
 
         super.init()
+
+        if (self.popover as? NSPopover)?.contentViewController == nil {
+            let contentView = PopoverContentView(viewModel: viewModel) { [weak self] in
+                self?.closePopover()
+            }
+            (self.popover as? NSPopover)?.contentViewController = NSHostingController(rootView: contentView)
+        }
 
         if let statusBar = statusBar {
             let item = statusBar.statusItem(withLength: NSStatusItem.variableLength)

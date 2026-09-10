@@ -5,6 +5,7 @@ import Testing
 import XCTest
 #endif
 import AppKit
+import SwiftUI
 @testable import HiddenStart
 
 @MainActor
@@ -83,6 +84,34 @@ struct StatusItemControllerTests {
         fixture.controller.closePopover()
         #expect(!fixture.mockPopover.isShown)
         #expect(fixture.mockPopover.closeCalledCount == 1)
+    }
+
+    @Test("Popover content view add application action dismisses popover")
+    func addApplicationActionDismissesPopover() {
+        let fixture = StatusItemControllerTestFixture()
+        fixture.controller.togglePopover(from: fixture.dummyView)
+        #expect(fixture.mockPopover.isShown)
+
+        let contentView = PopoverContentView(viewModel: fixture.viewModel) {
+            fixture.controller.closePopover()
+        }
+
+        contentView.onAddApplication?()
+        #expect(!fixture.mockPopover.isShown)
+        #expect(fixture.mockPopover.closeCalledCount == 1)
+    }
+
+    @Test("Standard StatusItemController configures popover content with dismissal callback")
+    func standardStatusItemControllerWiresDismissalCallback() {
+        let viewModel = StatusViewModel()
+        let controller = StatusItemController(viewModel: viewModel, popover: nil, statusBar: nil)
+        guard let popover = controller.popover as? NSPopover,
+              let hosting = popover.contentViewController as? NSHostingController<PopoverContentView> else {
+            Issue.record("Expected NSPopover with NSHostingController<PopoverContentView>")
+            return
+        }
+
+        #expect(hosting.rootView.onAddApplication != nil)
     }
 
     @Test("End-to-end boot launch flow executes startup run and heals apps")
@@ -169,6 +198,20 @@ final class StatusItemControllerXCTest: XCTestCase {
         XCTAssertTrue(fixture.mockPopover.isShown)
 
         fixture.controller.closePopover()
+        XCTAssertFalse(fixture.mockPopover.isShown)
+        XCTAssertEqual(fixture.mockPopover.closeCalledCount, 1)
+    }
+
+    func testAddApplicationActionDismissesPopover() {
+        let fixture = StatusItemControllerTestFixture()
+        fixture.controller.togglePopover(from: fixture.dummyView)
+        XCTAssertTrue(fixture.mockPopover.isShown)
+
+        let contentView = PopoverContentView(viewModel: fixture.viewModel) {
+            fixture.controller.closePopover()
+        }
+
+        contentView.onAddApplication?()
         XCTAssertFalse(fixture.mockPopover.isShown)
         XCTAssertEqual(fixture.mockPopover.closeCalledCount, 1)
     }

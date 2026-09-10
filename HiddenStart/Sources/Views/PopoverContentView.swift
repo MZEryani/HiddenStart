@@ -3,9 +3,11 @@ import SwiftUI
 public struct PopoverContentView: View {
     @ObservedObject public var viewModel: StatusViewModel
     @State private var editingApp: ManagedApp?
+    public var onAddApplication: (() -> Void)?
 
-    public init(viewModel: StatusViewModel) {
+    public init(viewModel: StatusViewModel, onAddApplication: (() -> Void)? = nil) {
         self.viewModel = viewModel
+        self.onAddApplication = onAddApplication
     }
 
     public var body: some View {
@@ -265,6 +267,7 @@ public struct PopoverContentView: View {
     private var footerView: some View {
         HStack {
             Button("+ Add Application...") {
+                onAddApplication?()
                 Task {
                     await viewModel.addApplication()
                 }

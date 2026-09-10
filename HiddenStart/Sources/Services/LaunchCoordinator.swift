@@ -272,10 +272,11 @@ public final class LaunchCoordinator: ObservableObject, LaunchCoordinating {
     private func handleOfflineTimeout() {
         offlineTimeoutTask = nil
         var appsToSkip: [ManagedApp] = []
+        var tasksToCancel: [Task<Void, Never>] = []
 
         for (id, app) in registeredApps where app.waitForInternet {
             if let task = tasks.removeValue(forKey: id) {
-                task.cancel()
+                tasksToCancel.append(task)
                 appsToSkip.append(app)
             }
             remainingDelays.removeValue(forKey: id)
@@ -294,6 +295,10 @@ public final class LaunchCoordinator: ObservableObject, LaunchCoordinating {
             startDeferredRetryObserver()
         } else {
             networkMonitor.stopMonitoring()
+        }
+
+        for task in tasksToCancel {
+            task.cancel()
         }
     }
 

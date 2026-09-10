@@ -391,7 +391,10 @@ struct LaunchCoordinatorTests {
         coordinator.startStartupRun(for: [app])
 
         // Wait for offline timeout (20ms) + deferred retry window (40ms) to fully expire
-        try await Task.sleep(for: .milliseconds(100))
+        for _ in 0..<40 {
+            if mockNetwork.stopMonitoringCallCount >= 2 { break }
+            try await Task.sleep(for: .milliseconds(10))
+        }
 
         #expect(coordinator.networkStatus == "Skipped (Offline)")
         // Connecting AFTER the deferred retry window expired should NOT trigger launch
@@ -399,7 +402,7 @@ struct LaunchCoordinatorTests {
         try await Task.sleep(for: .milliseconds(30))
 
         #expect(mockSuppressor.launchedApps.isEmpty)
-        #expect(mockNetwork.stopMonitoringCallCount >= 1)
+        #expect(mockNetwork.stopMonitoringCallCount >= 2)
     }
 
     @Test("Conjunction: when network connects before delay finishes, launch occurs at delay end")
@@ -494,7 +497,10 @@ struct LaunchCoordinatorTests {
 
         // Now connect network
         mockNetwork.simulateNetworkChange(isConnected: true)
-        await Task.yield()
+        for _ in 0..<20 {
+            if mockSuppressor.launchedApps.count == 1 { break }
+            try await Task.sleep(for: .milliseconds(10))
+        }
 
         #expect(mockSuppressor.launchedApps.count == 1)
         #expect(mockSuppressor.launchedApps.first?.id == app.id)
