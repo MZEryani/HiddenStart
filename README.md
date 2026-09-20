@@ -1,140 +1,140 @@
 # HiddenStart
 
-A lightweight background-resident macOS menu bar utility that manages application startup on login with intelligent network gating, custom launch delays, and multi-stage window suppression.
+HiddenStart is a lightweight macOS menu bar application that controls when and how your login items launch. It prevents offline connection errors, reduces login stutter, and keeps background apps hidden.
 
 [![macOS 13.0+](https://img.shields.io/badge/macOS-13.0%2B-blue.svg)](https://apple.com/macos)
 [![Swift 6.0](https://img.shields.io/badge/Swift-6.0-orange.svg)](https://swift.org)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
----
-
-## The Problem
-
-When modern Macs boot up or log in:
-
-1. **Network Race Conditions:** macOS starts login items in parallel with Wi-Fi DHCP negotiation and network routing. Applications that depend on immediate internet connectivity (e.g., Discord, Steam, Spotify) often launch before connection is established, resulting in failed update checks, fatal "No Internet" dialogs, or offline locks.
-2. **Loss of Native "Launch Hidden" on macOS 13+:** Starting in macOS 13 (Ventura), Apple removed the native "Hide" checkbox from `System Settings > General > Login Items`. Users can no longer natively configure applications to start minimized or concealed.
-3. **Window Spam & Focus Stealing:** Launching multiple heavy apps at once leads to window focus thrashing, screen clutter, and CPU/disk contention during login.
-
-## The Solution
-
-**HiddenStart** intercepts and orchestrates the launch sequence for your configured applications:
-
-* **Intelligent Network Gate:** Monitors network routing via `NWPathMonitor` and holds back network-dependent apps until active internet connectivity is verified.
-* **Custom Launch Delays:** Staggers application launches with per-app configurable timers (0–180 seconds) to eliminate login thrashing.
-* **Multi-Stage Window Suppression:** Enforces hidden launch states using native `NSWorkspace.OpenConfiguration` combined with a non-intrusive post-launch suppression engine and a multi-process `FocusGuard` that tames stubborn Electron and Chromium apps without requiring invasive Accessibility permissions.
-* **Deferred Retry:** Employs a bounded observation window following an offline startup run to trigger skipped network-gated apps as soon as connectivity is restored.
-* **Built-In App Presets:** Automatically detects recognized applications (such as Discord and Steam) and applies optimal arguments (`--start-minimized`, `-silent`) and settings.
-* **Ultra-Lightweight Footprint:** Operates strictly as a menu bar accessory (`LSUIElement = true`) with near-zero idle CPU usage and under 25 MB RAM.
+<p align="center">
+  <!-- Primary Demo: Capture the open menu bar popover showing active queued apps and countdowns (suggested size: ~480-520px width) -->
+  <img src="docs/assets/menu-popover.png" width="480" alt="HiddenStart Menu Bar Interface">
+</p>
 
 ---
 
-## How It Works
+## Why HiddenStart?
 
-```mermaid
-flowchart TD
-    Login[User Logs In] --> HS[HiddenStart Starts]
-    HS --> SR[Initiate Startup Run]
-    
-    subgraph Evaluation Loop
-        SR --> CheckApp[Evaluate Managed App]
-        CheckApp --> Gate{Network Gate\nEnabled?}
-        Gate -- Yes --> CheckNet{Internet\nActive?}
-        CheckNet -- No --> Deferred[Queue for Deferred Retry]
-        CheckNet -- Yes --> Delay[Wait for Launch Delay]
-        Gate -- No --> Delay
-        
-        Delay --> Launch[Stage 1: Launch with hides = true & Preset Arguments]
-        Launch --> Suppress[Stage 2: Window Suppression Engine & FocusGuard]
-    end
-```
+Starting in macOS 13 (Ventura), Apple removed the native "Hide" option for login items. At the same time, macOS attempts to launch all startup applications simultaneously while network interfaces are still establishing DHCP leases.
 
-### Window Suppression & FocusGuard
+For applications like Discord, Steam, and Spotify, this leads to two recurring annoyances:
+* Apps open before Wi-Fi or Ethernet is ready, throwing connection errors or stalling in offline mode.
+* Windows immediately pop up across your desktop on login, interrupting your workflow.
 
-Standard macOS apps respect `NSWorkspace.OpenConfiguration.hides = true`. However, Electron apps (like Discord) and custom runtimes (like Steam) frequently spawn windows asynchronously and steal focus seconds after launch.
-
-HiddenStart solves this via a resilient, non-intrusive two-stage pipeline:
-1. **Stage 1 (Launch Configuration):** Launches the app with `hides = true`, `activates = false`, and injected CLI flags (e.g., `--start-minimized` or `-silent`).
-2. **Stage 2 (Focus Guard & Window Suppression):** A background watcher monitors the process during a 20-second grace window, catching asynchronous window activations with a 2-strike suppression threshold without interfering with intentional user interaction.
+HiddenStart runs quietly in your menu bar, holding back selected applications until your internet connection is active, staggering their launches, and ensuring their windows stay hidden.
 
 ---
 
-## Domain Concepts
+## Features
 
-To ensure clarity and consistency throughout the codebase, HiddenStart adheres to the following domain vocabulary:
+* **Network Gating:** Uses system network monitoring to delay opening network-dependent apps until an internet connection is established.
+* **Custom Startup Delays:** Staggers application launches between 0 and 180 seconds to reduce CPU and disk thrashing on boot.
+* **Two-Stage Window Suppression:** Keeps applications hidden on startup, including Electron and Chromium apps that ignore standard launch flags.
+* **Focus Guard:** Monitors processes during launch to stop background apps from stealing keyboard and window focus.
+* **Application Presets:** Automatically detects recognized apps (such as Discord and Steam) and applies recommended launch flags and delays.
+* **Deferred Retry:** If the machine boots without internet, network-gated apps enter an observation queue and launch automatically once a connection is detected.
+* **Low Footprint:** Lives purely in the menu bar (`LSUIElement`), using under 25 MB of memory and near-zero idle CPU.
 
-| Concept | Description |
-| :--- | :--- |
-| **Managed App** | An application configured within HiddenStart to be launched on login. |
-| **Startup Run** | The automated launch cycle initiated when the user logs in that evaluates and launches managed apps. |
-| **Network Gate** | The reachability condition that delays an app's launch until active internet connectivity is verified. |
-| **Launch Delay** | The duration in seconds to wait before launching an app during a Startup Run. |
-| **Window Suppression** | The multi-stage technique used to prevent an app's UI from stealing focus or appearing on screen during launch. |
-| **App Preset** | A set of pre-configured default settings (arguments, launch delay, network gate) automatically mapped to recognized managed apps. |
-| **Deferred Retry** | The bounded observation window following an offline startup run during which skipped network-gated apps are triggered if connectivity is established. |
+---
+
+## Screenshots
+
+<p align="center">
+  <!-- Screenshot 1: Menu Bar Popover showing list of managed applications with delay and network indicators -->
+  <img src="docs/assets/menu-popover.png" width="48%" alt="HiddenStart Menu Bar Popover">
+  <!-- Screenshot 2: App Inspector sheet showing delay slider, network gate toggle, and custom arguments -->
+  <img src="docs/assets/app-inspector.png" width="48%" alt="Application Settings Inspector">
+</p>
 
 ---
 
 ## Requirements
 
-* **Operating System:** macOS 13.0 (Ventura), macOS 14.0 (Sonoma), macOS 15.0 (Sequoia), or later
-* **Architecture:** Apple Silicon or Intel 64-bit
-* **Developer Tools:** Xcode 15.0+ and Swift 6.0 toolchain
+* macOS 13.0 (Ventura) or later
+* Apple Silicon or Intel 64-bit processor
 
 ---
 
-## Building and Development
+## Getting Started
 
-### Using Swift Package Manager
-To build the executable directly:
+1. Open HiddenStart from your Applications folder. The app will appear in your menu bar.
+2. Click the menu bar icon and select **Add Application**.
+3. Choose an app from `/Applications`. HiddenStart will automatically apply presets if the app is recognized.
+4. Adjust the launch delay slider and toggle **Wait for Internet** or **Launch Hidden** as desired.
+5. Enable **Launch HiddenStart at Login** in the menu bar popover to automate the process.
+
+To test your configuration without logging out, click **Test** next to any configured application.
+
+---
+
+## Building from Source
+
+### Prerequisites
+
+* Xcode 15.0 or later (or Command Line Tools with Swift 6.0)
+* [XcodeGen](https://github.com/yonaskolb/XcodeGen) (optional, for regenerating Xcode project files)
+
+### Option 1: Swift Package Manager
+
+Clone the repository and build the binary:
+
 ```bash
-swift build
+git clone https://github.com/MZEryani/HiddenStart.git
+cd HiddenStart
+swift build -c release
 ```
 
-To run unit tests:
+Run the unit test suite:
+
 ```bash
 bash scripts/test.sh
 ```
 
-### Using XcodeGen
-HiddenStart includes a [`project.yml`](project.yml) specification. To regenerate the Xcode project:
+### Option 2: Xcode
+
+Generate the `.xcodeproj` file and open it:
+
 ```bash
 xcodegen generate
 open HiddenStart.xcodeproj
 ```
 
+In Xcode, select the **HiddenStart** scheme and press **Cmd + R** to run, or **Cmd + U** to run tests.
+
 ---
 
-## Configuration & Storage
+## Configuration
 
-HiddenStart stores its user configuration as clean, transparent JSON in your user Application Support directory:
+Configuration is saved as a single JSON file in your user Application Support directory:
 
-```
+```text
 ~/Library/Application Support/HiddenStart/apps.json
 ```
 
-Each **Managed App** record stores:
-* Display name and bundle path (`/Applications/...`)
-* Optional bundle identifier
-* Launch Delay in seconds
-* Network Gate toggle (`waitForInternet`)
-* Window Suppression toggle (`launchHidden`)
-* Custom arguments (e.g. `--start-minimized`)
-* Enabled state and sort order
+You can inspect or back up this file directly. Changes made through the menu bar interface update this file automatically.
 
 ---
 
-## Architecture & Design Documents
+## How It Works
 
-For in-depth architectural specifications and design decisions:
-* [System Design Document](DESIGN.md)
-* [Domain Context & Glossary](CONTEXT.md)
-* [ADR 0001: Window Suppression Strategy](docs/adr/0001-window-suppression-strategy.md)
-* [ADR 0002: Status Item & Popover Architecture](docs/adr/0002-status-item-and-popover-architecture.md)
-* [ADR 0003: Non-Sandboxed Developer ID Distribution](docs/adr/0003-non-sandboxed-developer-id.md)
+* **Startup Coordination:** HiddenStart registers through `SMAppService.mainApp`, allowing macOS to launch it cleanly at login without background daemons or helper scripts.
+* **Network Detection:** Reachability is tracked using Apple's `Network.framework` (`NWPathMonitor`), querying local socket state without sending network pings.
+* **Suppression Strategy:** HiddenStart first requests a hidden launch via `NSWorkspace.OpenConfiguration`. A background watcher then monitors the application for 20 seconds, catching late window spawns without requiring macOS Accessibility permissions.
+
+Technical design documents and decision records are available in `docs/adr/` and `DESIGN.md`.
+
+---
+
+## Contributing
+
+Contributions are welcome. If you find a bug or have a feature request:
+
+1. Open an issue on GitHub describing the behavior or proposal.
+2. For code changes, fork the repository, create a feature branch, and submit a pull request.
+3. Ensure all unit tests pass by running `bash scripts/test.sh` before submitting.
 
 ---
 
 ## License
 
-This project is licensed under the MIT License — see the [LICENSE](LICENSE) file for details.
+This project is licensed under the MIT License. See [LICENSE](LICENSE) for details.
