@@ -3,15 +3,15 @@ import Foundation
 
 @MainActor
 public final class MockApplicationPicker: ApplicationPickerSelecting {
-    public var appToReturn: ManagedApp?
-    public var pickApplicationCallCount = 0
+    public var urlToReturn: URL?
+    public var pickApplicationURLCallCount = 0
 
-    public init(appToReturn: ManagedApp? = nil) {
-        self.appToReturn = appToReturn
+    public init(urlToReturn: URL? = nil) {
+        self.urlToReturn = urlToReturn
     }
 
-    public func pickApplication() async -> ManagedApp? {
-        pickApplicationCallCount += 1
-        return appToReturn
+    public func pickApplicationURL() async -> URL? {
+        pickApplicationURLCallCount += 1
+        return urlToReturn
     }
 }

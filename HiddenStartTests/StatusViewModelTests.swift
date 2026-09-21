@@ -17,13 +17,17 @@ final class MockAppTerminator: AppTerminating {
 }
 
 @MainActor
-final class MockSettingsStore: SettingsStoring {
+final class MockManagedAppStore: ManagedAppStoring {
     var apps: [ManagedApp] = []
     var saveCallCount = 0
     var loadCallCount = 0
+    var missingIds: Set<UUID> = []
+    var refreshAppHealthCallCount = 0
+    var appToReturnFromAddApp: ManagedApp?
 
-    init(apps: [ManagedApp] = []) {
+    init(apps: [ManagedApp] = [], missingIds: Set<UUID> = []) {
         self.apps = apps
+        self.missingIds = missingIds
     }
 
     func load() throws {
@@ -34,6 +38,22 @@ final class MockSettingsStore: SettingsStoring {
         saveCallCount += 1
     }
 
+    func addApp(at url: URL) throws -> ManagedApp {
+        if let preset = appToReturnFromAddApp {
+            apps.append(preset)
+            try save()
+            return preset
+        }
+        let app = AppPreset.makeManagedApp(
+            name: url.deletingPathExtension().lastPathComponent,
+            bundlePath: url.path,
+            bundleIdentifier: nil
+        )
+        apps.append(app)
+        try save()
+        return app
+    }
+
     func add(_ app: ManagedApp) throws {
         apps.append(app)
         try save()
@@ -41,6 +61,7 @@ final class MockSettingsStore: SettingsStoring {
 
     func remove(withId id: UUID) throws {
         apps.removeAll { $0.id == id }
+        missingIds.remove(id)
         try save()
     }
 
@@ -49,6 +70,14 @@ final class MockSettingsStore: SettingsStoring {
             apps[index] = app
             try save()
         }
+    }
+
+    func isMissing(appId: UUID) -> Bool {
+        missingIds.contains(appId)
+    }
+
+    func refreshAppHealth() {
+        refreshAppHealthCallCount += 1
     }
 }
 
@@ -85,13 +114,14 @@ struct StatusViewModelTests {
 
     @Test("Adding application updates managedApps and saves to store")
     func testAddApplication() async {
-        let store = MockSettingsStore()
+        let store = MockManagedAppStore()
         let picker = MockApplicationPicker()
-        let app = ManagedApp(name: "Discord", bundlePath: "/Applications/Discord.app", customArguments: "")
-        picker.appToReturn = app
+        let discordApp = ManagedApp(name: "Discord", bundlePath: "/Applications/Discord.app", bundleIdentifier: "com.hnc.discord", customArguments: "")
+        store.appToReturnFromAddApp = discordApp
+        picker.urlToReturn = URL(fileURLWithPath: "/Applications/Discord.app")
 
         let viewModel = StatusViewModel(
-            settingsStore: store,
+            managedAppStore: store,
             appPicker: picker
         )
 
@@ -103,8 +133,9 @@ struct StatusViewModelTests {
         #expect(store.saveCallCount == 1)
         #expect(viewModel.statusMessage == "Added Discord (Launch Hidden configured; custom arguments empty)")
 
-        let otherApp = ManagedApp(name: "Slack", bundlePath: "/Applications/Slack.app")
-        picker.appToReturn = otherApp
+        let slackApp = ManagedApp(name: "Slack", bundlePath: "/Applications/Slack.app")
+        store.appToReturnFromAddApp = slackApp
+        picker.urlToReturn = URL(fileURLWithPath: "/Applications/Slack.app")
         await viewModel.addApplication()
         #expect(viewModel.statusMessage == "Added Slack")
     }
@@ -112,8 +143,8 @@ struct StatusViewModelTests {
     @Test("Removing application removes from store and updates managedApps")
     func testRemoveApplication() {
         let app = ManagedApp(name: "Steam", bundlePath: "/Applications/Steam.app")
-        let store = MockSettingsStore(apps: [app])
-        let viewModel = StatusViewModel(settingsStore: store)
+        let store = MockManagedAppStore(apps: [app])
+        let viewModel = StatusViewModel(managedAppStore: store)
 
         #expect(viewModel.managedApps.count == 1)
 
@@ -127,8 +158,8 @@ struct StatusViewModelTests {
     @Test("Toggling app enabled state flips isEnabled and saves")
     func testToggleAppEnabled() {
         let app = ManagedApp(name: "Steam", bundlePath: "/Applications/Steam.app", isEnabled: true)
-        let store = MockSettingsStore(apps: [app])
-        let viewModel = StatusViewModel(settingsStore: store)
+        let store = MockManagedAppStore(apps: [app])
+        let viewModel = StatusViewModel(managedAppStore: store)
 
         viewModel.toggleAppEnabled(withId: app.id)
 
@@ -146,7 +177,8 @@ struct StatusViewModelTests {
             launchHidden: true,
             customArguments: "-silent"
         )
-        let viewModel = StatusViewModel(workspaceManager: workspace)
+        let store = MockManagedAppStore(apps: [app])
+        let viewModel = StatusViewModel(managedAppStore: store, workspaceManager: workspace)
 
         await viewModel.testLaunch(app: app)
 
@@ -162,7 +194,8 @@ struct StatusViewModelTests {
     func testLaunchDelegatesToSuppressor() async {
         let suppressor = MockWindowSuppressor()
         let app = ManagedApp(name: "Discord", bundlePath: "/Applications/Discord.app", launchHidden: true)
-        let viewModel = StatusViewModel(windowSuppressor: suppressor)
+        let store = MockManagedAppStore(apps: [app])
+        let viewModel = StatusViewModel(managedAppStore: store, windowSuppressor: suppressor)
 
         await viewModel.testLaunch(app: app)
 
@@ -174,9 +207,9 @@ struct StatusViewModelTests {
     @Test("startStartupRun delegates to launch coordinator")
     func startStartupRunDelegatesToCoordinator() {
         let app = ManagedApp(name: "Discord", bundlePath: "/Applications/Discord.app")
-        let store = MockSettingsStore(apps: [app])
+        let store = MockManagedAppStore(apps: [app])
         let coordinator = MockLaunchCoordinator()
-        let viewModel = StatusViewModel(settingsStore: store, launchCoordinator: coordinator)
+        let viewModel = StatusViewModel(managedAppStore: store, launchCoordinator: coordinator)
 
         viewModel.startStartupRun()
 
@@ -188,9 +221,9 @@ struct StatusViewModelTests {
     @Test("Toggling app to disabled cancels in-flight launch")
     func toggleAppToDisabledCancelsLaunch() {
         let app = ManagedApp(name: "Discord", bundlePath: "/Applications/Discord.app", isEnabled: true)
-        let store = MockSettingsStore(apps: [app])
+        let store = MockManagedAppStore(apps: [app])
         let coordinator = MockLaunchCoordinator()
-        let viewModel = StatusViewModel(settingsStore: store, launchCoordinator: coordinator)
+        let viewModel = StatusViewModel(managedAppStore: store, launchCoordinator: coordinator)
 
         viewModel.toggleAppEnabled(withId: app.id)
 
@@ -200,9 +233,9 @@ struct StatusViewModelTests {
     @Test("Removing app cancels in-flight launch")
     func removingAppCancelsLaunch() {
         let app = ManagedApp(name: "Discord", bundlePath: "/Applications/Discord.app")
-        let store = MockSettingsStore(apps: [app])
+        let store = MockManagedAppStore(apps: [app])
         let coordinator = MockLaunchCoordinator()
-        let viewModel = StatusViewModel(settingsStore: store, launchCoordinator: coordinator)
+        let viewModel = StatusViewModel(managedAppStore: store, launchCoordinator: coordinator)
 
         viewModel.removeApplication(withId: app.id)
 
@@ -224,8 +257,8 @@ struct StatusViewModelTests {
     @Test("Updating application updates store and managedApps list")
     func updateApplicationUpdatesStore() {
         let app = ManagedApp(name: "Discord", bundlePath: "/Applications/Discord.app", delaySeconds: 10)
-        let store = MockSettingsStore(apps: [app])
-        let viewModel = StatusViewModel(settingsStore: store)
+        let store = MockManagedAppStore(apps: [app])
+        let viewModel = StatusViewModel(managedAppStore: store)
 
         var modified = app
         modified.delaySeconds = 30
@@ -246,7 +279,6 @@ struct StatusViewModelTests {
         coordinator.statusSummary = "Discord in 5s"
         coordinator.remainingDelays = [id: 5]
 
-        // Yield to allow Combine pipeline to run
         await Task.yield()
 
         #expect(viewModel.remainingDelays[id] == 5)
@@ -309,25 +341,28 @@ struct StatusViewModelTests {
     }
 
     @Test("ViewModel auto-heals moved app on load and updates store")
-    func testAutoHealingOnLoad() {
+    func testAutoHealingOnLoad() throws {
+        let fileURL = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString).appendingPathComponent("apps.json")
+        defer { try? FileManager.default.removeItem(at: fileURL.deletingLastPathComponent()) }
+
+        let mockWorkspace = MockWorkspaceManager()
+        mockWorkspace.applicationURLs["com.example.moved"] = URL(fileURLWithPath: "/Applications/NewPath/App.app")
+
+        let store = ManagedAppStore(
+            fileURL: fileURL,
+            workspaceManager: mockWorkspace,
+            fileExistsChecker: { path in path == "/Applications/NewPath/App.app" }
+        )
         let movedApp = ManagedApp(
             name: "MovedApp",
             bundlePath: "/Applications/OldPath/App.app",
             bundleIdentifier: "com.example.moved"
         )
-        let store = MockSettingsStore(apps: [movedApp])
-        let mockWorkspace = MockWorkspaceManager()
-        mockWorkspace.applicationURLs["com.example.moved"] = URL(fileURLWithPath: "/Applications/NewPath/App.app")
-
-        let resolver = AppResolver(
-            workspaceManager: mockWorkspace,
-            fileExistsChecker: { path in path == "/Applications/NewPath/App.app" }
-        )
+        try store.addDirectlyForTesting(movedApp)
 
         let viewModel = StatusViewModel(
-            settingsStore: store,
-            workspaceManager: mockWorkspace,
-            appResolver: resolver
+            managedAppStore: store,
+            workspaceManager: mockWorkspace
         )
 
         #expect(viewModel.managedApps.count == 1)
@@ -336,29 +371,20 @@ struct StatusViewModelTests {
         #expect(viewModel.isAppMissing(movedApp) == false)
     }
 
-    @Test("ViewModel detects missing apps and sets missingAppIds")
+    @Test("ViewModel detects missing apps and queries isAppMissing")
     func testMissingAppDetection() {
         let missingApp = ManagedApp(
             name: "DeletedApp",
             bundlePath: "/Applications/DeletedApp.app",
             bundleIdentifier: "com.example.deleted"
         )
-        let store = MockSettingsStore(apps: [missingApp])
-        let mockWorkspace = MockWorkspaceManager()
-
-        let resolver = AppResolver(
-            workspaceManager: mockWorkspace,
-            fileExistsChecker: { _ in false }
-        )
+        let store = MockManagedAppStore(apps: [missingApp], missingIds: [missingApp.id])
 
         let viewModel = StatusViewModel(
-            settingsStore: store,
-            workspaceManager: mockWorkspace,
-            appResolver: resolver
+            managedAppStore: store
         )
 
         #expect(viewModel.isAppMissing(missingApp) == true)
-        #expect(viewModel.missingAppIds.contains(missingApp.id))
     }
 
     @Test("testLaunch on missing app fails gracefully without crashing")
@@ -368,20 +394,12 @@ struct StatusViewModelTests {
             bundlePath: "/Applications/GhostApp.app",
             bundleIdentifier: "com.example.ghost"
         )
-        let store = MockSettingsStore(apps: [missingApp])
-        let mockWorkspace = MockWorkspaceManager()
+        let store = MockManagedAppStore(apps: [missingApp], missingIds: [missingApp.id])
         let suppressor = MockWindowSuppressor()
 
-        let resolver = AppResolver(
-            workspaceManager: mockWorkspace,
-            fileExistsChecker: { _ in false }
-        )
-
         let viewModel = StatusViewModel(
-            settingsStore: store,
-            workspaceManager: mockWorkspace,
-            windowSuppressor: suppressor,
-            appResolver: resolver
+            managedAppStore: store,
+            windowSuppressor: suppressor
         )
 
         await viewModel.testLaunch(app: missingApp)
@@ -392,7 +410,10 @@ struct StatusViewModelTests {
     }
 
     @Test("Startup run resolves and heals multiple managed apps before launching")
-    func startupRunHealsAndLaunchesMultipleApps() {
+    func startupRunHealsAndLaunchesMultipleApps() throws {
+        let fileURL = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString).appendingPathComponent("apps.json")
+        defer { try? FileManager.default.removeItem(at: fileURL.deletingLastPathComponent()) }
+
         let discord = ManagedApp(
             name: "Discord",
             bundlePath: "/Applications/Discord.app",
@@ -405,19 +426,16 @@ struct StatusViewModelTests {
             bundleIdentifier: "com.valvesoftware.steam",
             customArguments: ""
         )
-        let store = MockSettingsStore(apps: [discord, steam])
-        let coordinator = MockLaunchCoordinator()
-        let mockWorkspace = MockWorkspaceManager()
-
-        let resolver = AppResolver(
-            workspaceManager: mockWorkspace,
+        let store = ManagedAppStore(
+            fileURL: fileURL,
             fileExistsChecker: { _ in true }
         )
+        try store.addDirectlyForTesting(discord)
+        try store.addDirectlyForTesting(steam)
 
+        let coordinator = MockLaunchCoordinator()
         let viewModel = StatusViewModel(
-            settingsStore: store,
-            workspaceManager: mockWorkspace,
-            appResolver: resolver,
+            managedAppStore: store,
             launchCoordinator: coordinator
         )
 
@@ -425,9 +443,7 @@ struct StatusViewModelTests {
 
         #expect(coordinator.startStartupRunCallCount == 1)
         #expect(coordinator.lastAppsStarted.count == 2)
-        // Discord has empty customArguments
         #expect(viewModel.managedApps.first { $0.bundleIdentifier == "com.hnc.Discord" }?.customArguments == "")
-        // Steam should have healed preset arguments backfilled
         #expect(viewModel.managedApps.first { $0.bundleIdentifier == "com.valvesoftware.steam" }?.customArguments == "-silent")
     }
 }

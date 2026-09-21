@@ -116,6 +116,9 @@ struct StatusItemControllerTests {
 
     @Test("End-to-end boot launch flow executes startup run and heals apps")
     func testEndToEndBootLaunchFlow() async throws {
+        let fileURL = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString).appendingPathComponent("apps.json")
+        defer { try? FileManager.default.removeItem(at: fileURL.deletingLastPathComponent()) }
+
         let movedApp = ManagedApp(
             name: "Slack",
             bundlePath: "/Applications/OldSlack.app",
@@ -124,29 +127,28 @@ struct StatusItemControllerTests {
             waitForInternet: false,
             isEnabled: true
         )
-        let store = MockSettingsStore(apps: [movedApp])
         let mockWorkspace = MockWorkspaceManager()
         mockWorkspace.applicationURLs["com.tinyspeck.slackmacgap"] = URL(fileURLWithPath: "/Applications/NewSlack.app")
 
-        let resolver = AppResolver(
+        let store = ManagedAppStore(
+            fileURL: fileURL,
             workspaceManager: mockWorkspace,
             fileExistsChecker: { path in path == "/Applications/NewSlack.app" }
         )
+        try store.addDirectlyForTesting(movedApp)
+
         let suppressor = MockWindowSuppressor()
         let coordinator = LaunchCoordinator(
             workspaceManager: mockWorkspace,
             windowSuppressor: suppressor,
             networkMonitor: MockNetworkMonitor(isConnected: true),
-            appResolver: resolver,
-            settingsStore: store,
             sleep: { _ in }
         )
 
         let viewModel = StatusViewModel(
-            settingsStore: store,
+            managedAppStore: store,
             workspaceManager: mockWorkspace,
             windowSuppressor: suppressor,
-            appResolver: resolver,
             launchCoordinator: coordinator
         )
 

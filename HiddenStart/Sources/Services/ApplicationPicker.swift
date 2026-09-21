@@ -1,21 +1,6 @@
 import AppKit
 import UniformTypeIdentifiers
 
-public enum BundleAppResolver {
-    public static func resolveApp(at url: URL) -> ManagedApp {
-        let bundle = Bundle(url: url)
-        let name = (bundle?.object(forInfoDictionaryKey: "CFBundleDisplayName") as? String)
-            ?? (bundle?.object(forInfoDictionaryKey: "CFBundleName") as? String)
-            ?? url.deletingPathExtension().lastPathComponent
-        let bundleIdentifier = bundle?.bundleIdentifier
-        return AppPreset.makeManagedApp(
-            name: name,
-            bundlePath: url.path,
-            bundleIdentifier: bundleIdentifier
-        )
-    }
-}
-
 @MainActor
 public final class ApplicationPicker: ApplicationPickerSelecting {
     private let appActivator: @MainActor (Bool) -> Void
@@ -32,7 +17,7 @@ public final class ApplicationPicker: ApplicationPickerSelecting {
         self.panelPresenter = panelPresenter
     }
 
-    public func pickApplication() async -> ManagedApp? {
+    public func pickApplicationURL() async -> URL? {
         appActivator(true)
 
         let panel = panelFactory()
@@ -50,6 +35,6 @@ public final class ApplicationPicker: ApplicationPickerSelecting {
             return nil
         }
 
-        return BundleAppResolver.resolveApp(at: url)
+        return url
     }
 }

@@ -38,7 +38,7 @@ flowchart TD
         HS --> MenuBar[Menu Bar Status Item\nNSStatusItem + SwiftUI Popover]
         HS --> LC[LaunchCoordinator]
         
-        Config[(apps.json / SettingsStore)] <--> MenuBar
+        Config[(apps.json / ManagedAppStore)] <--> MenuBar
         Config --> LC
         
         LC --> Gate{App Requires\nInternet?}
@@ -215,7 +215,7 @@ When an application is added or edited, an inspector sheet provides:
 
 - [ ] **Phase 1: Project Scaffolding & Data Storage**
   - Create native Swift macOS application bundle.
-  - Implement `AppItem` model and `SettingsStore` (JSON file storage in App Support).
+  - Implement `AppItem` model and `ManagedAppStore` (JSON file storage in App Support).
 - [ ] **Phase 2: Core Services**
   - Implement `NetworkMonitor` (`NWPathMonitor` wrapper).
   - Implement `AutoStartManager` (`SMAppService` integration).

@@ -12,15 +12,13 @@ public final class StatusViewModel: ObservableObject {
     @Published public var autoStartStatus: AutoStartStatus = .notRegistered
     @Published public var isAutoStartEnabled: Bool = false
     @Published public var autoStartRequiresApproval: Bool = false
-    @Published public var missingAppIds: Set<UUID> = []
 
     private let terminator: AppTerminating
-    private let settingsStore: SettingsStoring
+    public let managedAppStore: ManagedAppStoring
     private let workspaceManager: WorkspaceManaging
     private let appPicker: ApplicationPickerSelecting
     private let windowSuppressor: WindowSuppressing
     public let autoStartManager: AutoStartManaging
-    private let appResolver: AppResolving
     public let launchCoordinator: LaunchCoordinating
     private var cancellables = Set<AnyCancellable>()
 
@@ -28,30 +26,27 @@ public final class StatusViewModel: ObservableObject {
         title: String = "HiddenStart",
         statusMessage: String = "Ready",
         terminator: AppTerminating = SystemAppTerminator(),
-        settingsStore: SettingsStoring? = nil,
+        managedAppStore: ManagedAppStoring? = nil,
         workspaceManager: WorkspaceManaging? = nil,
         appPicker: ApplicationPickerSelecting? = nil,
         windowSuppressor: WindowSuppressing? = nil,
         networkMonitor: NetworkMonitoring? = nil,
         autoStartManager: AutoStartManaging? = nil,
-        appResolver: AppResolving? = nil,
         launchCoordinator: LaunchCoordinating? = nil
     ) {
         self.title = title
         self.statusMessage = statusMessage
         self.terminator = terminator
 
-        let resolvedStore = settingsStore ?? SettingsStore()
         let resolvedWorkspace = workspaceManager ?? SystemWorkspaceManager()
+        let resolvedStore = managedAppStore ?? ManagedAppStore(workspaceManager: resolvedWorkspace)
         let resolvedSuppressor = windowSuppressor ?? WindowSuppressionEngine(workspaceManager: resolvedWorkspace)
-        let resolvedResolver = appResolver ?? AppResolver(workspaceManager: resolvedWorkspace)
         let resolvedAutoStart = autoStartManager ?? AutoStartManager()
 
-        self.settingsStore = resolvedStore
+        self.managedAppStore = resolvedStore
         self.workspaceManager = resolvedWorkspace
         self.appPicker = appPicker ?? ApplicationPicker()
         self.windowSuppressor = resolvedSuppressor
-        self.appResolver = resolvedResolver
         self.autoStartManager = resolvedAutoStart
 
         self.autoStartStatus = resolvedAutoStart.status
@@ -61,20 +56,17 @@ public final class StatusViewModel: ObservableObject {
         let resolvedCoordinator = launchCoordinator ?? LaunchCoordinator(
             workspaceManager: resolvedWorkspace,
             windowSuppressor: resolvedSuppressor,
-            networkMonitor: networkMonitor,
-            appResolver: resolvedResolver,
-            settingsStore: resolvedStore
+            networkMonitor: networkMonitor
         )
         self.launchCoordinator = resolvedCoordinator
         self.networkStatus = resolvedCoordinator.networkStatus
 
-        if settingsStore == nil {
+        if managedAppStore == nil {
             try? resolvedStore.load()
         }
 
-        let healedApps = resolvedResolver.resolveAndHeal(apps: resolvedStore.apps, store: resolvedStore)
-        self.managedApps = healedApps
-        self.missingAppIds = Set(healedApps.filter { resolvedResolver.resolveApp($0).isMissing }.map(\.id))
+        resolvedStore.refreshAppHealth()
+        self.managedApps = resolvedStore.apps
 
         resolvedCoordinator.remainingDelaysPublisher
             .receive(on: RunLoop.main)
@@ -109,14 +101,10 @@ public final class StatusViewModel: ObservableObject {
     }
 
     public func startStartupRun() {
-        resolveAndHealApps()
-        launchCoordinator.startStartupRun(for: managedApps)
-    }
-
-    public func resolveAndHealApps() {
-        let healedApps = appResolver.resolveAndHeal(apps: managedApps, store: settingsStore)
-        self.managedApps = healedApps
-        self.missingAppIds = Set(healedApps.filter { appResolver.resolveApp($0).isMissing }.map(\.id))
+        managedAppStore.refreshAppHealth()
+        managedApps = managedAppStore.apps
+        let appsToLaunch = managedApps.filter { !managedAppStore.isMissing(appId: $0.id) }
+        launchCoordinator.startStartupRun(for: appsToLaunch)
     }
 
     public func cancelLaunch(for id: UUID) {
@@ -149,46 +137,32 @@ public final class StatusViewModel: ObservableObject {
     }
 
     public func isAppMissing(_ app: ManagedApp) -> Bool {
-        missingAppIds.contains(app.id)
-    }
-
-    public func checkAppResolution(for app: ManagedApp) {
-        let resolution = appResolver.resolveApp(app)
-        if resolution.isMissing {
-            missingAppIds.insert(app.id)
-        } else if resolution.isHealed {
-            missingAppIds.remove(app.id)
-            updateApplication(resolution.app)
-        } else {
-            missingAppIds.remove(app.id)
-        }
+        managedAppStore.isMissing(appId: app.id)
     }
 
     public func addApplication() async {
-        guard let newApp = await appPicker.pickApplication() else {
+        guard let url = await appPicker.pickApplicationURL() else {
             return
         }
 
         do {
-            try settingsStore.add(newApp)
-            managedApps = settingsStore.apps
-            checkAppResolution(for: newApp)
+            let newApp = try managedAppStore.addApp(at: url)
+            managedApps = managedAppStore.apps
             if newApp.isDiscord {
                 statusMessage = "Added Discord (Launch Hidden configured; custom arguments empty)"
             } else {
                 statusMessage = "Added \(newApp.name)"
             }
         } catch {
-            statusMessage = "Failed to add \(newApp.name)"
+            statusMessage = "Failed to add application"
         }
     }
 
     public func removeApplication(withId id: UUID) {
         launchCoordinator.cancelLaunch(for: id)
-        missingAppIds.remove(id)
         do {
-            try settingsStore.remove(withId: id)
-            managedApps = settingsStore.apps
+            try managedAppStore.remove(withId: id)
+            managedApps = managedAppStore.apps
             statusMessage = "Removed app"
         } catch {
             statusMessage = "Failed to remove app"
@@ -203,8 +177,8 @@ public final class StatusViewModel: ObservableObject {
             launchCoordinator.cancelLaunch(for: id)
         }
         do {
-            try settingsStore.update(app)
-            managedApps = settingsStore.apps
+            try managedAppStore.update(app)
+            managedApps = managedAppStore.apps
         } catch {
             statusMessage = "Failed to update app"
         }
@@ -212,9 +186,8 @@ public final class StatusViewModel: ObservableObject {
 
     public func updateApplication(_ app: ManagedApp) {
         do {
-            try settingsStore.update(app)
-            managedApps = settingsStore.apps
-            checkAppResolution(for: app)
+            try managedAppStore.update(app)
+            managedApps = managedAppStore.apps
             statusMessage = "Updated \(app.name)"
         } catch {
             statusMessage = "Failed to update \(app.name)"
@@ -222,19 +195,17 @@ public final class StatusViewModel: ObservableObject {
     }
 
     public func testLaunch(app: ManagedApp) async {
-        let resolution = appResolver.resolveApp(app)
-        if resolution.isMissing {
-            missingAppIds.insert(app.id)
+        managedAppStore.refreshAppHealth()
+        managedApps = managedAppStore.apps
+
+        if managedAppStore.isMissing(appId: app.id) {
             statusMessage = "Launch failed: Application not found"
             return
         }
 
-        let appToLaunch = resolution.app
-        if resolution.isHealed {
-            missingAppIds.remove(app.id)
-            updateApplication(appToLaunch)
-        } else {
-            missingAppIds.remove(app.id)
+        guard let appToLaunch = managedApps.first(where: { $0.id == app.id }) else {
+            statusMessage = "Launch failed: Application not found"
+            return
         }
 
         statusMessage = "Launching \(appToLaunch.name)..."
