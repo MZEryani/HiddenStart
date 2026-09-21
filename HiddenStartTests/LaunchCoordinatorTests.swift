@@ -659,8 +659,8 @@ struct LaunchCoordinatorTests {
         #expect(mockSuppressor.launchedApps.contains { $0.id == app2.id })
     }
 
-    @Test("Cancelling a launched app cancels suppression for that specific process identifier")
-    func cancelLaunchCancelsSuppressorForProcess() async throws {
+    @Test("Cancelling a launched app cancels suppression for that specific app")
+    func cancelLaunchCancelsSuppressorForApp() async throws {
         let mockWorkspace = MockWorkspaceManager()
         let mockSuppressor = MockWindowSuppressor()
         let mockNetwork = MockNetworkMonitor(isConnected: true)
@@ -673,8 +673,6 @@ struct LaunchCoordinatorTests {
             waitForInternet: false,
             isEnabled: true
         )
-
-        mockSuppressor.stubbedRunningApp = MockRunningApp(processIdentifier: 8877)
 
         let coordinator = LaunchCoordinator(
             workspaceManager: mockWorkspace,
@@ -690,7 +688,7 @@ struct LaunchCoordinatorTests {
 
         coordinator.cancelLaunch(for: app.id)
 
-        #expect(mockSuppressor.cancelledPids == [8877])
+        #expect(mockSuppressor.cancelledAppIds == [app.id])
     }
 
     @Test("CancelAll delegates cancelAll to window suppressor")
