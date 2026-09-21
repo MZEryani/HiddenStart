@@ -208,8 +208,8 @@ struct StatusViewModelTests {
     func startStartupRunDelegatesToCoordinator() {
         let app = ManagedApp(name: "Discord", bundlePath: "/Applications/Discord.app")
         let store = MockManagedAppStore(apps: [app])
-        let coordinator = MockLaunchCoordinator()
-        let viewModel = StatusViewModel(managedAppStore: store, launchCoordinator: coordinator)
+        let coordinator = MockStartupRunCoordinator()
+        let viewModel = StatusViewModel(managedAppStore: store, startupRunCoordinator: coordinator)
 
         viewModel.startStartupRun()
 
@@ -222,8 +222,8 @@ struct StatusViewModelTests {
     func toggleAppToDisabledCancelsLaunch() {
         let app = ManagedApp(name: "Discord", bundlePath: "/Applications/Discord.app", isEnabled: true)
         let store = MockManagedAppStore(apps: [app])
-        let coordinator = MockLaunchCoordinator()
-        let viewModel = StatusViewModel(managedAppStore: store, launchCoordinator: coordinator)
+        let coordinator = MockStartupRunCoordinator()
+        let viewModel = StatusViewModel(managedAppStore: store, startupRunCoordinator: coordinator)
 
         viewModel.toggleAppEnabled(withId: app.id)
 
@@ -234,8 +234,8 @@ struct StatusViewModelTests {
     func removingAppCancelsLaunch() {
         let app = ManagedApp(name: "Discord", bundlePath: "/Applications/Discord.app")
         let store = MockManagedAppStore(apps: [app])
-        let coordinator = MockLaunchCoordinator()
-        let viewModel = StatusViewModel(managedAppStore: store, launchCoordinator: coordinator)
+        let coordinator = MockStartupRunCoordinator()
+        let viewModel = StatusViewModel(managedAppStore: store, startupRunCoordinator: coordinator)
 
         viewModel.removeApplication(withId: app.id)
 
@@ -245,8 +245,8 @@ struct StatusViewModelTests {
     @Test("Quitting cancels all in-flight launches")
     func quittingCancelsAllLaunches() {
         let mockTerminator = MockAppTerminator()
-        let coordinator = MockLaunchCoordinator()
-        let viewModel = StatusViewModel(terminator: mockTerminator, launchCoordinator: coordinator)
+        let coordinator = MockStartupRunCoordinator()
+        let viewModel = StatusViewModel(terminator: mockTerminator, startupRunCoordinator: coordinator)
 
         viewModel.quit()
 
@@ -271,13 +271,17 @@ struct StatusViewModelTests {
 
     @Test("Coordinator delay updates remainingDelays and statusMessage")
     func delayUpdatesRemainingDelaysAndStatus() async {
-        let coordinator = MockLaunchCoordinator()
-        let viewModel = StatusViewModel(launchCoordinator: coordinator)
-
         let id = UUID()
-        coordinator.isRunning = true
-        coordinator.statusSummary = "Discord in 5s"
-        coordinator.remainingDelays = [id: 5]
+        let app = ManagedApp(id: id, name: "Discord", bundlePath: "/Applications/Discord.app", delaySeconds: 5)
+        let store = MockManagedAppStore(apps: [app])
+        let coordinator = MockStartupRunCoordinator()
+        let viewModel = StatusViewModel(managedAppStore: store, startupRunCoordinator: coordinator)
+
+        coordinator.state = StartupRunState(
+            phase: .running,
+            remainingDelays: [id: 5],
+            isNetworkConnected: true
+        )
 
         await Task.yield()
 
@@ -287,22 +291,56 @@ struct StatusViewModelTests {
 
     @Test("Coordinator networkStatus updates viewModel networkStatus and statusMessage")
     func networkStatusUpdatesViewModel() async {
-        let coordinator = MockLaunchCoordinator()
-        let viewModel = StatusViewModel(launchCoordinator: coordinator)
+        let coordinator = MockStartupRunCoordinator()
+        let viewModel = StatusViewModel(startupRunCoordinator: coordinator)
 
         #expect(viewModel.networkStatus == "Network connected")
 
-        coordinator.networkStatus = "Waiting for network..."
+        coordinator.state = StartupRunState(
+            phase: .running,
+            waitingForNetworkAppIds: [UUID()],
+            isNetworkConnected: false
+        )
         await Task.yield()
 
         #expect(viewModel.networkStatus == "Waiting for network...")
+        #expect(viewModel.statusMessage == "Waiting for network...")
 
-        coordinator.statusSummary = "Skipped (Offline)"
-        coordinator.networkStatus = "Skipped (Offline)"
+        coordinator.state = StartupRunState(
+            phase: .deferredRetry,
+            isNetworkConnected: false,
+            skippedAppIds: [UUID()]
+        )
         await Task.yield()
 
         #expect(viewModel.networkStatus == "Skipped (Offline)")
         #expect(viewModel.statusMessage == "Skipped (Offline)")
+    }
+
+    @Test("Status message transitions through running to Ready when run completes")
+    func statusMessageTransitionsBackToReady() async {
+        let coordinator = MockStartupRunCoordinator()
+        let viewModel = StatusViewModel(startupRunCoordinator: coordinator)
+
+        #expect(viewModel.statusMessage == "Ready")
+
+        coordinator.state = StartupRunState(
+            phase: .running,
+            remainingDelays: [:],
+            isNetworkConnected: true
+        )
+        await Task.yield()
+
+        #expect(viewModel.statusMessage == "Launching...")
+
+        coordinator.state = StartupRunState(
+            phase: .idle,
+            remainingDelays: [:],
+            isNetworkConnected: true
+        )
+        await Task.yield()
+
+        #expect(viewModel.statusMessage == "Ready")
     }
 
     @Test("toggleAutoStart registers when disabled and unregisters when enabled")
@@ -433,10 +471,10 @@ struct StatusViewModelTests {
         try store.addDirectlyForTesting(discord)
         try store.addDirectlyForTesting(steam)
 
-        let coordinator = MockLaunchCoordinator()
+        let coordinator = MockStartupRunCoordinator()
         let viewModel = StatusViewModel(
             managedAppStore: store,
-            launchCoordinator: coordinator
+            startupRunCoordinator: coordinator
         )
 
         viewModel.startStartupRun()

@@ -40,24 +40,13 @@ private final class CancellationResumer: @unchecked Sendable {
 }
 
 @MainActor
-public final class LaunchCoordinator: ObservableObject, LaunchCoordinating {
+public final class StartupRunCoordinator: ObservableObject, StartupRunCoordinating {
     public typealias SleepFunction = @Sendable (Duration) async throws -> Void
 
-    @Published public private(set) var remainingDelays: [UUID: Int] = [:]
-    @Published public private(set) var isRunning: Bool = false
-    @Published public private(set) var statusSummary: String = "Ready"
-    @Published public private(set) var networkStatus: String = "Network connected"
+    @Published public private(set) var state: StartupRunState
 
-    public var remainingDelaysPublisher: AnyPublisher<[UUID: Int], Never> {
-        $remainingDelays.eraseToAnyPublisher()
-    }
-
-    public var statusSummaryPublisher: AnyPublisher<String, Never> {
-        $statusSummary.eraseToAnyPublisher()
-    }
-
-    public var networkStatusPublisher: AnyPublisher<String, Never> {
-        $networkStatus.eraseToAnyPublisher()
+    public var statePublisher: AnyPublisher<StartupRunState, Never> {
+        $state.eraseToAnyPublisher()
     }
 
     private let workspaceManager: WorkspaceManaging
@@ -69,7 +58,6 @@ public final class LaunchCoordinator: ObservableObject, LaunchCoordinating {
 
     private var tasks: [UUID: Task<Void, Never>] = [:]
     private var registeredApps: [UUID: ManagedApp] = [:]
-    private var waitingForNetworkApps: Set<UUID> = []
     private var skippedGatedApps: [ManagedApp] = []
     private var offlineTimeoutTask: Task<Void, Never>?
     private var deferredRetryTask: Task<Void, Never>?
@@ -90,7 +78,13 @@ public final class LaunchCoordinator: ObservableObject, LaunchCoordinating {
         self.offlineTimeout = offlineTimeout
         self.deferredRetryDuration = deferredRetryDuration
         self.delaySleep = sleep
-        self.networkStatus = resolvedNetworkMonitor.isConnected ? "Network connected" : "Waiting for network..."
+        self.state = StartupRunState(
+            phase: .idle,
+            remainingDelays: [:],
+            waitingForNetworkAppIds: [],
+            isNetworkConnected: resolvedNetworkMonitor.isConnected,
+            skippedAppIds: []
+        )
     }
 
     public func startStartupRun(for apps: [ManagedApp]) {
@@ -104,28 +98,32 @@ public final class LaunchCoordinator: ObservableObject, LaunchCoordinating {
 
         let appsToLaunch = enabledApps.filter { !isAppAlreadyRunning($0) }
         guard !appsToLaunch.isEmpty else {
-            isRunning = false
-            statusSummary = "Ready"
+            state.phase = .idle
             return
         }
 
-        isRunning = true
         networkMonitor.startMonitoring()
 
-        let hasNetworkGatedApp = appsToLaunch.contains { $0.waitForInternet }
-        if networkMonitor.isConnected {
-            networkStatus = "Network connected"
-        } else {
-            networkStatus = "Waiting for network..."
+        var initialDelays: [UUID: Int] = [:]
+        for app in appsToLaunch where app.delaySeconds > 0 {
+            initialDelays[app.id] = app.delaySeconds
         }
+
+        state = StartupRunState(
+            phase: .running,
+            remainingDelays: initialDelays,
+            waitingForNetworkAppIds: [],
+            isNetworkConnected: networkMonitor.isConnected,
+            skippedAppIds: []
+        )
+
+        let hasNetworkGatedApp = appsToLaunch.contains { $0.waitForInternet }
 
         networkObserverCancellable = networkMonitor.isConnectedPublisher
             .sink { [weak self] isConnected in
                 guard let self else { return }
+                self.state.isNetworkConnected = isConnected
                 if isConnected {
-                    if self.networkStatus == "Waiting for network..." {
-                        self.networkStatus = "Network connected"
-                    }
                     self.offlineTimeoutTask?.cancel()
                     self.offlineTimeoutTask = nil
                 }
@@ -135,7 +133,7 @@ public final class LaunchCoordinator: ObservableObject, LaunchCoordinating {
             offlineTimeoutTask = Task { @MainActor [weak self] in
                 guard let self else { return }
                 do {
-                    try await Task.sleep(for: self.offlineTimeout)
+                    try await self.delaySleep(self.offlineTimeout)
                 } catch {
                     return
                 }
@@ -145,13 +143,6 @@ public final class LaunchCoordinator: ObservableObject, LaunchCoordinating {
                 }
             }
         }
-
-        for app in appsToLaunch {
-            if app.delaySeconds > 0 {
-                remainingDelays[app.id] = app.delaySeconds
-            }
-        }
-        updateStatusSummary()
 
         for app in appsToLaunch {
             let taskId = app.id
@@ -169,34 +160,24 @@ public final class LaunchCoordinator: ObservableObject, LaunchCoordinating {
                     if Task.isCancelled { break }
                     remaining -= 1
                     if remaining > 0 {
-                        self.remainingDelays[app.id] = remaining
-                        self.updateStatusSummary()
+                        self.state.remainingDelays[app.id] = remaining
                     }
                 }
 
-                self.remainingDelays.removeValue(forKey: app.id)
-                self.updateStatusSummary()
+                self.state.remainingDelays.removeValue(forKey: app.id)
 
                 if Task.isCancelled {
                     self.tasks.removeValue(forKey: taskId)
-                    if self.tasks.isEmpty {
-                        self.isRunning = false
-                        self.updateStatusSummary()
-                        if self.deferredRetryTask == nil {
-                            self.networkMonitor.stopMonitoring()
-                        }
-                    }
+                    self.evaluateRunCompletion()
                     return
                 }
 
                 if app.waitForInternet && !self.networkMonitor.isConnected {
-                    self.waitingForNetworkApps.insert(app.id)
-                    self.updateStatusSummary()
+                    self.state.waitingForNetworkAppIds.insert(app.id)
 
                     await self.waitUntilConnected()
 
-                    self.waitingForNetworkApps.remove(app.id)
-                    self.updateStatusSummary()
+                    self.state.waitingForNetworkAppIds.remove(app.id)
                 }
 
                 if !Task.isCancelled {
@@ -204,14 +185,7 @@ public final class LaunchCoordinator: ObservableObject, LaunchCoordinating {
                 }
 
                 self.tasks.removeValue(forKey: taskId)
-
-                if self.tasks.isEmpty {
-                    self.isRunning = false
-                    self.updateStatusSummary()
-                    if self.deferredRetryTask == nil {
-                        self.networkMonitor.stopMonitoring()
-                    }
-                }
+                self.evaluateRunCompletion()
             }
         }
     }
@@ -220,18 +194,25 @@ public final class LaunchCoordinator: ObservableObject, LaunchCoordinating {
         if let task = tasks.removeValue(forKey: appWithId) {
             task.cancel()
         }
+        registeredApps.removeValue(forKey: appWithId)
         windowSuppressor.cancel(appId: appWithId)
-        remainingDelays.removeValue(forKey: appWithId)
-        waitingForNetworkApps.remove(appWithId)
+        state.remainingDelays.removeValue(forKey: appWithId)
+        state.waitingForNetworkAppIds.remove(appWithId)
+        state.skippedAppIds.remove(appWithId)
         skippedGatedApps.removeAll(where: { $0.id == appWithId })
 
-        if tasks.isEmpty {
-            isRunning = false
-            if deferredRetryTask == nil {
-                networkMonitor.stopMonitoring()
-            }
+        let hasRemainingGatedApp = registeredApps.values.contains { $0.waitForInternet }
+        if !hasRemainingGatedApp {
+            offlineTimeoutTask?.cancel()
+            offlineTimeoutTask = nil
         }
-        updateStatusSummary()
+
+        if skippedGatedApps.isEmpty && deferredRetryTask != nil {
+            deferredRetryTask?.cancel()
+            deferredRetryTask = nil
+        }
+
+        evaluateRunCompletion()
     }
 
     public func cancelAll() {
@@ -240,8 +221,6 @@ public final class LaunchCoordinator: ObservableObject, LaunchCoordinating {
         }
         tasks.removeAll()
         windowSuppressor.cancelAll()
-        remainingDelays.removeAll()
-        waitingForNetworkApps.removeAll()
         skippedGatedApps.removeAll()
 
         offlineTimeoutTask?.cancel()
@@ -255,8 +234,13 @@ public final class LaunchCoordinator: ObservableObject, LaunchCoordinating {
 
         networkMonitor.stopMonitoring()
 
-        isRunning = false
-        updateStatusSummary()
+        state = StartupRunState(
+            phase: .idle,
+            remainingDelays: [:],
+            waitingForNetworkAppIds: [],
+            isNetworkConnected: networkMonitor.isConnected,
+            skippedAppIds: []
+        )
     }
 
     private func handleOfflineTimeout() {
@@ -269,22 +253,18 @@ public final class LaunchCoordinator: ObservableObject, LaunchCoordinating {
                 tasksToCancel.append(task)
                 appsToSkip.append(app)
             }
-            remainingDelays.removeValue(forKey: id)
-            waitingForNetworkApps.remove(id)
+            state.remainingDelays.removeValue(forKey: id)
+            state.waitingForNetworkAppIds.remove(id)
+            state.skippedAppIds.insert(id)
         }
 
         skippedGatedApps = appsToSkip
-        networkStatus = "Skipped (Offline)"
-
-        if tasks.isEmpty {
-            isRunning = false
-        }
-        updateStatusSummary()
 
         if !skippedGatedApps.isEmpty {
             startDeferredRetryObserver()
         } else {
             networkMonitor.stopMonitoring()
+            evaluateRunCompletion()
         }
 
         for task in tasksToCancel {
@@ -293,6 +273,10 @@ public final class LaunchCoordinator: ObservableObject, LaunchCoordinating {
     }
 
     private func startDeferredRetryObserver() {
+        if tasks.isEmpty {
+            state.phase = .deferredRetry
+        }
+
         deferredRetryTask?.cancel()
         deferredRetryTask = Task { @MainActor [weak self] in
             guard let self else { return }
@@ -301,35 +285,7 @@ public final class LaunchCoordinator: ObservableObject, LaunchCoordinating {
                 ? self.deferredRetryDuration - self.offlineTimeout
                 : .zero
 
-            let resumer = CancellationResumer()
-
-            let timeoutTask = Task { [weak self] in
-                guard self != nil else { return }
-                do {
-                    try await Task.sleep(for: remainingWindow)
-                    resumer.resume()
-                } catch {
-                    // Cancelled
-                }
-            }
-
-            await withTaskCancellationHandler {
-                await withCheckedContinuation { continuation in
-                    resumer.setContinuation(continuation)
-                    let cancellable = self.networkMonitor.isConnectedPublisher
-                        .filter { $0 }
-                        .first()
-                        .sink { _ in
-                            resumer.resume()
-                        }
-                    resumer.setCancellable(cancellable)
-                }
-            } onCancel: {
-                timeoutTask.cancel()
-                resumer.resume()
-            }
-
-            timeoutTask.cancel()
+            await self.waitForNetworkConnection(timeout: remainingWindow)
 
             guard !Task.isCancelled else {
                 self.networkMonitor.stopMonitoring()
@@ -339,7 +295,7 @@ public final class LaunchCoordinator: ObservableObject, LaunchCoordinating {
             if self.networkMonitor.isConnected {
                 let deferredToLaunch = self.skippedGatedApps
                 self.skippedGatedApps.removeAll()
-                self.networkStatus = "Network connected"
+                self.state.phase = .running
 
                 for app in deferredToLaunch {
                     if Task.isCancelled { break }
@@ -347,27 +303,56 @@ public final class LaunchCoordinator: ObservableObject, LaunchCoordinating {
                     self.tasks[taskId] = Task { @MainActor [weak self] in
                         guard let self else { return }
                         await self.launchResolvedApp(app)
+                        self.state.skippedAppIds.remove(app.id)
                         self.tasks.removeValue(forKey: taskId)
-                        if self.tasks.isEmpty {
-                            self.isRunning = false
-                            self.updateStatusSummary()
-                            self.networkMonitor.stopMonitoring()
-                        }
+                        self.evaluateRunCompletion()
                     }
                 }
-                self.isRunning = !self.tasks.isEmpty
-                self.updateStatusSummary()
+                if self.tasks.isEmpty {
+                    self.evaluateRunCompletion()
+                }
             } else {
                 self.skippedGatedApps.removeAll()
-                self.networkMonitor.stopMonitoring()
+                self.evaluateRunCompletion()
             }
             self.deferredRetryTask = nil
         }
     }
 
+    private func evaluateRunCompletion() {
+        if tasks.isEmpty {
+            if deferredRetryTask != nil && !skippedGatedApps.isEmpty {
+                state.phase = .deferredRetry
+            } else {
+                state.phase = .idle
+                offlineTimeoutTask?.cancel()
+                offlineTimeoutTask = nil
+                networkObserverCancellable?.cancel()
+                networkObserverCancellable = nil
+                networkMonitor.stopMonitoring()
+            }
+        }
+    }
+
     private func waitUntilConnected() async {
+        await waitForNetworkConnection()
+    }
+
+    private func waitForNetworkConnection(timeout: Duration? = nil) async {
         if networkMonitor.isConnected { return }
         let resumer = CancellationResumer()
+
+        let timeoutTask: Task<Void, Never>? = timeout.map { duration in
+            Task { [weak self] in
+                guard let self else { return }
+                do {
+                    try await self.delaySleep(duration)
+                    resumer.resume()
+                } catch {
+                    // Cancelled
+                }
+            }
+        }
 
         await withTaskCancellationHandler {
             await withCheckedContinuation { continuation in
@@ -381,8 +366,11 @@ public final class LaunchCoordinator: ObservableObject, LaunchCoordinating {
                 resumer.setCancellable(cancellable)
             }
         } onCancel: {
+            timeoutTask?.cancel()
             resumer.resume()
         }
+
+        timeoutTask?.cancel()
     }
 
     private func isAppAlreadyRunning(_ app: ManagedApp) -> Bool {
@@ -406,28 +394,6 @@ public final class LaunchCoordinator: ObservableObject, LaunchCoordinating {
 
             return false
         }
-    }
-
-    private func updateStatusSummary() {
-        if remainingDelays.isEmpty {
-            if !waitingForNetworkApps.isEmpty {
-                statusSummary = "Waiting for network..."
-                return
-            }
-            if networkStatus == "Skipped (Offline)" && !isRunning {
-                statusSummary = "Skipped (Offline)"
-                return
-            }
-            statusSummary = isRunning ? "Launching..." : "Ready"
-            return
-        }
-
-        let sorted = remainingDelays.compactMap { (id, remaining) -> (String, Int)? in
-            guard let app = registeredApps[id] else { return nil }
-            return (app.name, remaining)
-        }.sorted { $0.1 < $1.1 }
-
-        statusSummary = sorted.map { "\($0.0) in \($0.1)s" }.joined(separator: ", ")
     }
 
     private func launchResolvedApp(_ app: ManagedApp) async {

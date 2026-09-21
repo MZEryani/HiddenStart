@@ -36,12 +36,12 @@ flowchart TD
     subgraph HiddenStart App
         HS --> SM[AutoStartManager\nSMAppService]
         HS --> MenuBar[Menu Bar Status Item\nNSStatusItem + SwiftUI Popover]
-        HS --> LC[LaunchCoordinator]
+        HS --> SRC[StartupRunCoordinator]
         
         Config[(apps.json / ManagedAppStore)] <--> MenuBar
-        Config --> LC
+        Config --> SRC
         
-        LC --> Gate{App Requires\nInternet?}
+        SRC --> Gate{App Requires\nInternet?}
         NWP -->|Status: .satisfied| Gate
         Gate -- Yes --> NWWait[Wait for Network OK]
         Gate -- No --> Timer[Delay Timer]
@@ -90,7 +90,7 @@ Monitors network interface changes and determines when full internet reachabilit
 
 ---
 
-### 3.3 `LaunchCoordinator` & `AppLauncher`
+### 3.3 `StartupRunCoordinator` & `WindowSuppressionEngine`
 Manages the queue and timing of application launches.
 
 #### The Two-Stage Launch Strategy
@@ -219,7 +219,7 @@ When an application is added or edited, an inspector sheet provides:
 - [ ] **Phase 2: Core Services**
   - Implement `NetworkMonitor` (`NWPathMonitor` wrapper).
   - Implement `AutoStartManager` (`SMAppService` integration).
-  - Implement `LaunchCoordinator` (delay queues, cancellation, `NSWorkspace.OpenConfiguration`).
+  - Implement `StartupRunCoordinator` (delay queues, cancellation, `NSWorkspace.OpenConfiguration`).
   - Implement two-stage hidden enforcement (`runningApp.hide()`).
 - [ ] **Phase 3: User Interface**
   - Build `MenuBarExtra` / `NSStatusItem` container with popover.

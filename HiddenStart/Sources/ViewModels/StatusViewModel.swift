@@ -19,7 +19,8 @@ public final class StatusViewModel: ObservableObject {
     private let appPicker: ApplicationPickerSelecting
     private let windowSuppressor: WindowSuppressing
     public let autoStartManager: AutoStartManaging
-    public let launchCoordinator: LaunchCoordinating
+    public let startupRunCoordinator: StartupRunCoordinating
+    private var previousPhase: StartupRunState.Phase?
     private var cancellables = Set<AnyCancellable>()
 
     public init(
@@ -30,9 +31,8 @@ public final class StatusViewModel: ObservableObject {
         workspaceManager: WorkspaceManaging? = nil,
         appPicker: ApplicationPickerSelecting? = nil,
         windowSuppressor: WindowSuppressing? = nil,
-        networkMonitor: NetworkMonitoring? = nil,
         autoStartManager: AutoStartManaging? = nil,
-        launchCoordinator: LaunchCoordinating? = nil
+        startupRunCoordinator: StartupRunCoordinating? = nil
     ) {
         self.title = title
         self.statusMessage = statusMessage
@@ -53,13 +53,12 @@ public final class StatusViewModel: ObservableObject {
         self.isAutoStartEnabled = resolvedAutoStart.isEnabled
         self.autoStartRequiresApproval = resolvedAutoStart.hasApprovalIssue
 
-        let resolvedCoordinator = launchCoordinator ?? LaunchCoordinator(
+        let resolvedCoordinator = startupRunCoordinator ?? StartupRunCoordinator(
             workspaceManager: resolvedWorkspace,
-            windowSuppressor: resolvedSuppressor,
-            networkMonitor: networkMonitor
+            windowSuppressor: resolvedSuppressor
         )
-        self.launchCoordinator = resolvedCoordinator
-        self.networkStatus = resolvedCoordinator.networkStatus
+        self.startupRunCoordinator = resolvedCoordinator
+        self.networkStatus = Self.deriveNetworkStatus(from: resolvedCoordinator.state)
 
         if managedAppStore == nil {
             try? resolvedStore.load()
@@ -68,35 +67,65 @@ public final class StatusViewModel: ObservableObject {
         resolvedStore.refreshAppHealth()
         self.managedApps = resolvedStore.apps
 
-        resolvedCoordinator.remainingDelaysPublisher
+        resolvedCoordinator.statePublisher
             .receive(on: RunLoop.main)
-            .sink { [weak self] delays in
+            .sink { [weak self] state in
                 guard let self else { return }
-                self.remainingDelays = delays
-            }
-            .store(in: &cancellables)
+                self.remainingDelays = state.remainingDelays
+                self.networkStatus = Self.deriveNetworkStatus(from: state)
 
-        resolvedCoordinator.statusSummaryPublisher
-            .receive(on: RunLoop.main)
-            .sink { [weak self] summary in
-                guard let self else { return }
-                if self.launchCoordinator.isRunning || summary == "Ready" || summary == "Skipped (Offline)" || summary == "Waiting for network..." {
-                    self.statusMessage = summary
+                if let derivedMessage = Self.deriveStatusMessage(from: state, apps: self.managedApps) {
+                    if state.phase != .idle || self.previousPhase != nil || self.statusMessage == "Ready" {
+                        self.statusMessage = derivedMessage
+                    }
                 }
-            }
-            .store(in: &cancellables)
-
-        resolvedCoordinator.networkStatusPublisher
-            .receive(on: RunLoop.main)
-            .sink { [weak self] status in
-                guard let self else { return }
-                self.networkStatus = status
+                self.previousPhase = state.phase
             }
             .store(in: &cancellables)
     }
 
+    public static func deriveNetworkStatus(from state: StartupRunState) -> String {
+        if state.phase == .deferredRetry || !state.skippedAppIds.isEmpty {
+            return "Skipped (Offline)"
+        } else if !state.isNetworkConnected {
+            return "Waiting for network..."
+        } else {
+            return "Network connected"
+        }
+    }
+
+    public static func deriveStatusMessage(from state: StartupRunState, apps: [ManagedApp]) -> String? {
+        if !state.remainingDelays.isEmpty {
+            let sorted = state.remainingDelays.compactMap { (id, remaining) -> (String, Int)? in
+                guard let app = apps.first(where: { $0.id == id }) else { return nil }
+                return (app.name, remaining)
+            }.sorted { $0.1 < $1.1 }
+            if !sorted.isEmpty {
+                return sorted.map { "\($0.0) in \($0.1)s" }.joined(separator: ", ")
+            }
+        }
+
+        if !state.waitingForNetworkAppIds.isEmpty {
+            return "Waiting for network..."
+        }
+
+        if state.phase == .deferredRetry || (!state.skippedAppIds.isEmpty && state.phase == .idle) {
+            return "Skipped (Offline)"
+        }
+
+        if state.phase == .running {
+            return "Launching..."
+        }
+
+        if state.phase == .idle {
+            return "Ready"
+        }
+
+        return nil
+    }
+
     public func quit() {
-        launchCoordinator.cancelAll()
+        startupRunCoordinator.cancelAll()
         terminator.terminate()
     }
 
@@ -104,11 +133,11 @@ public final class StatusViewModel: ObservableObject {
         managedAppStore.refreshAppHealth()
         managedApps = managedAppStore.apps
         let appsToLaunch = managedApps.filter { !managedAppStore.isMissing(appId: $0.id) }
-        launchCoordinator.startStartupRun(for: appsToLaunch)
+        startupRunCoordinator.startStartupRun(for: appsToLaunch)
     }
 
     public func cancelLaunch(for id: UUID) {
-        launchCoordinator.cancelLaunch(for: id)
+        startupRunCoordinator.cancelLaunch(for: id)
     }
 
     public func toggleAutoStart() {
@@ -159,7 +188,7 @@ public final class StatusViewModel: ObservableObject {
     }
 
     public func removeApplication(withId id: UUID) {
-        launchCoordinator.cancelLaunch(for: id)
+        startupRunCoordinator.cancelLaunch(for: id)
         do {
             try managedAppStore.remove(withId: id)
             managedApps = managedAppStore.apps
@@ -174,7 +203,7 @@ public final class StatusViewModel: ObservableObject {
         var app = managedApps[index]
         app.isEnabled.toggle()
         if !app.isEnabled {
-            launchCoordinator.cancelLaunch(for: id)
+            startupRunCoordinator.cancelLaunch(for: id)
         }
         do {
             try managedAppStore.update(app)

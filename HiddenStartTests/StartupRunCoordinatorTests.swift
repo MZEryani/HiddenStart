@@ -2,9 +2,9 @@ import Testing
 import Foundation
 @testable import HiddenStart
 
-@Suite("LaunchCoordinator Tests")
+@Suite("StartupRunCoordinator Tests")
 @MainActor
-struct LaunchCoordinatorTests {
+struct StartupRunCoordinatorTests {
 
     @Test("Skips already running applications and launches non-running apps")
     func skipsAlreadyRunningApps() async throws {
@@ -34,7 +34,7 @@ struct LaunchCoordinatorTests {
         )
 
         let mockNetwork = MockNetworkMonitor(isConnected: true)
-        let coordinator = LaunchCoordinator(
+        let coordinator = StartupRunCoordinator(
             workspaceManager: mockWorkspace,
             windowSuppressor: mockSuppressor,
             networkMonitor: mockNetwork,
@@ -42,16 +42,13 @@ struct LaunchCoordinatorTests {
         )
 
         coordinator.startStartupRun(for: [discord, steam])
-
-        // Wait a microtick for synchronous/immediate tasks
         await Task.yield()
 
-        // Discord should be skipped because it was already running
         #expect(mockSuppressor.launchedApps.contains { $0.id == steam.id })
         #expect(!mockSuppressor.launchedApps.contains { $0.id == discord.id })
     }
 
-    @Test("Skips disabled applications")
+    @Test("Skips disabled applications and remains idle")
     func skipsDisabledApps() async throws {
         let mockWorkspace = MockWorkspaceManager()
         let mockSuppressor = MockWindowSuppressor()
@@ -63,7 +60,7 @@ struct LaunchCoordinatorTests {
             isEnabled: false
         )
 
-        let coordinator = LaunchCoordinator(
+        let coordinator = StartupRunCoordinator(
             workspaceManager: mockWorkspace,
             windowSuppressor: mockSuppressor,
             sleep: { _ in }
@@ -73,21 +70,20 @@ struct LaunchCoordinatorTests {
         await Task.yield()
 
         #expect(mockSuppressor.launchedApps.isEmpty)
-        #expect(coordinator.isRunning == false)
+        #expect(coordinator.state.phase == .idle)
     }
 
-    @Test("Concurrently schedules launch delays and updates statusSummary and remainingDelays")
+    @Test("Concurrently schedules launch delays and updates state remainingDelays")
     func schedulesDelaysConcurrently() async throws {
         let mockWorkspace = MockWorkspaceManager()
         let mockSuppressor = MockWindowSuppressor()
         let mockNetwork = MockNetworkMonitor(isConnected: true)
 
-        let coordinator = LaunchCoordinator(
+        let coordinator = StartupRunCoordinator(
             workspaceManager: mockWorkspace,
             windowSuppressor: mockSuppressor,
             networkMonitor: mockNetwork,
             sleep: { _ in
-                // Yield to allow coordinator state inspection
                 await Task.yield()
             }
         )
@@ -100,19 +96,23 @@ struct LaunchCoordinatorTests {
         )
 
         coordinator.startStartupRun(for: [app])
-        #expect(coordinator.isRunning == true)
-        #expect(coordinator.remainingDelays[app.id] == 2)
-        #expect(coordinator.statusSummary == "Discord in 2s")
+        #expect(coordinator.state.phase == .running)
+        #expect(coordinator.state.remainingDelays[app.id] == 2)
 
-        // Let the task run
-        while coordinator.isRunning {
+        for _ in 0..<10 {
+            if coordinator.state.remainingDelays[app.id] == 1 { break }
+            await Task.yield()
+        }
+        #expect(coordinator.state.remainingDelays[app.id] == 1)
+
+        while coordinator.state.phase == .running {
             await Task.yield()
         }
 
         #expect(mockSuppressor.launchedApps.count == 1)
         #expect(mockSuppressor.launchedApps.first?.id == app.id)
-        #expect(coordinator.remainingDelays[app.id] == nil)
-        #expect(coordinator.isRunning == false)
+        #expect(coordinator.state.remainingDelays[app.id] == nil)
+        #expect(coordinator.state.phase == .idle)
     }
 
     @Test("Cancelling a single app aborts its task without launching")
@@ -120,11 +120,10 @@ struct LaunchCoordinatorTests {
         let mockWorkspace = MockWorkspaceManager()
         let mockSuppressor = MockWindowSuppressor()
 
-        let coordinator = LaunchCoordinator(
+        let coordinator = StartupRunCoordinator(
             workspaceManager: mockWorkspace,
             windowSuppressor: mockSuppressor,
             sleep: { _ in
-                // Sleep indefinitely until cancelled
                 try await Task.sleep(for: .seconds(100))
             }
         )
@@ -137,20 +136,21 @@ struct LaunchCoordinatorTests {
         )
 
         coordinator.startStartupRun(for: [app])
-        #expect(coordinator.remainingDelays[app.id] == 10)
+        #expect(coordinator.state.remainingDelays[app.id] == 10)
 
         coordinator.cancelLaunch(for: app.id)
 
-        #expect(coordinator.remainingDelays[app.id] == nil)
+        #expect(coordinator.state.remainingDelays[app.id] == nil)
         #expect(mockSuppressor.launchedApps.isEmpty)
+        #expect(coordinator.state.phase == .idle)
     }
 
-    @Test("cancelAll cleanly aborts all pending launches")
+    @Test("cancelAll cleanly aborts all pending launches and resets state")
     func cancelAllAbortsAllPendingLaunches() async throws {
         let mockWorkspace = MockWorkspaceManager()
         let mockSuppressor = MockWindowSuppressor()
 
-        let coordinator = LaunchCoordinator(
+        let coordinator = StartupRunCoordinator(
             workspaceManager: mockWorkspace,
             windowSuppressor: mockSuppressor,
             sleep: { _ in
@@ -172,12 +172,14 @@ struct LaunchCoordinatorTests {
         )
 
         coordinator.startStartupRun(for: [app1, app2])
-        #expect(coordinator.isRunning == true)
+        #expect(coordinator.state.phase == .running)
 
         coordinator.cancelAll()
 
-        #expect(coordinator.isRunning == false)
-        #expect(coordinator.remainingDelays.isEmpty)
+        #expect(coordinator.state.phase == .idle)
+        #expect(coordinator.state.remainingDelays.isEmpty)
+        #expect(coordinator.state.waitingForNetworkAppIds.isEmpty)
+        #expect(coordinator.state.skippedAppIds.isEmpty)
         #expect(mockSuppressor.launchedApps.isEmpty)
     }
 
@@ -187,7 +189,7 @@ struct LaunchCoordinatorTests {
         let mockSuppressor = MockWindowSuppressor()
         let mockNetwork = MockNetworkMonitor(isConnected: true)
 
-        let coordinator = LaunchCoordinator(
+        let coordinator = StartupRunCoordinator(
             workspaceManager: mockWorkspace,
             windowSuppressor: mockSuppressor,
             networkMonitor: mockNetwork,
@@ -205,7 +207,7 @@ struct LaunchCoordinatorTests {
         coordinator.startStartupRun(for: [app])
         await Task.yield()
 
-        #expect(coordinator.networkStatus == "Network connected")
+        #expect(coordinator.state.isNetworkConnected == true)
         #expect(mockSuppressor.launchedApps.count == 1)
         #expect(mockSuppressor.launchedApps.first?.id == app.id)
     }
@@ -216,12 +218,16 @@ struct LaunchCoordinatorTests {
         let mockSuppressor = MockWindowSuppressor()
         let mockNetwork = MockNetworkMonitor(isConnected: false)
 
-        let coordinator = LaunchCoordinator(
+        let coordinator = StartupRunCoordinator(
             workspaceManager: mockWorkspace,
             windowSuppressor: mockSuppressor,
             networkMonitor: mockNetwork,
             offlineTimeout: .seconds(60),
-            sleep: { _ in }
+            sleep: { duration in
+                if duration >= .seconds(60) {
+                    try await Task.sleep(for: .seconds(100))
+                }
+            }
         )
 
         let app = ManagedApp(
@@ -235,15 +241,16 @@ struct LaunchCoordinatorTests {
         coordinator.startStartupRun(for: [app])
         await Task.yield()
 
-        #expect(coordinator.networkStatus == "Waiting for network...")
-        #expect(coordinator.statusSummary == "Waiting for network...")
+        #expect(coordinator.state.isNetworkConnected == false)
+        #expect(coordinator.state.waitingForNetworkAppIds.contains(app.id))
         #expect(mockSuppressor.launchedApps.isEmpty)
 
         // Simulate network reconnecting
         mockNetwork.simulateNetworkChange(isConnected: true)
         await Task.yield()
 
-        #expect(coordinator.networkStatus == "Network connected")
+        #expect(coordinator.state.isNetworkConnected == true)
+        #expect(coordinator.state.waitingForNetworkAppIds.isEmpty)
         #expect(mockSuppressor.launchedApps.count == 1)
         #expect(mockSuppressor.launchedApps.first?.id == app.id)
     }
@@ -254,7 +261,7 @@ struct LaunchCoordinatorTests {
         let mockSuppressor = MockWindowSuppressor()
         let mockNetwork = MockNetworkMonitor(isConnected: false)
 
-        let coordinator = LaunchCoordinator(
+        let coordinator = StartupRunCoordinator(
             workspaceManager: mockWorkspace,
             windowSuppressor: mockSuppressor,
             networkMonitor: mockNetwork,
@@ -276,20 +283,25 @@ struct LaunchCoordinatorTests {
         #expect(mockSuppressor.launchedApps.first?.id == app.id)
     }
 
-    @Test("Offline fail-safe timeout skips gated apps after timeout and sets status to Skipped (Offline)")
+    @Test("Offline fail-safe timeout skips gated apps and transitions to deferred retry")
     func offlineTimeoutSkipsGatedApps() async throws {
         let mockWorkspace = MockWorkspaceManager()
         let mockSuppressor = MockWindowSuppressor()
         let mockNetwork = MockNetworkMonitor(isConnected: false)
 
-        let coordinator = LaunchCoordinator(
+        let coordinator = StartupRunCoordinator(
             workspaceManager: mockWorkspace,
             windowSuppressor: mockSuppressor,
             networkMonitor: mockNetwork,
-            offlineTimeout: .milliseconds(20),
+            offlineTimeout: .seconds(60),
             deferredRetryDuration: .seconds(900),
             sleep: { duration in
-                try await Task.sleep(for: duration)
+                // Instant sleep allows 60s timeout to trigger immediately
+                if duration == .seconds(60) {
+                    return
+                }
+                // For deferred retry sleep, hold until cancelled
+                try await Task.sleep(for: .seconds(100))
             }
         )
 
@@ -302,18 +314,16 @@ struct LaunchCoordinatorTests {
         )
 
         coordinator.startStartupRun(for: [app])
-        #expect(coordinator.networkStatus == "Waiting for network...")
 
-        // Wait for offline timeout to fire
-        for _ in 0..<30 {
-            if coordinator.networkStatus == "Skipped (Offline)" { break }
-            try await Task.sleep(for: .milliseconds(10))
+        // Yield for the offline timeout task to execute
+        for _ in 0..<10 {
+            if coordinator.state.phase == .deferredRetry { break }
+            await Task.yield()
         }
 
-        #expect(coordinator.networkStatus == "Skipped (Offline)")
-        #expect(coordinator.statusSummary == "Skipped (Offline)")
+        #expect(coordinator.state.skippedAppIds.contains(app.id))
+        #expect(coordinator.state.phase == .deferredRetry)
         #expect(mockSuppressor.launchedApps.isEmpty)
-        #expect(coordinator.isRunning == false)
     }
 
     @Test("Deferred retry triggers skipped gated apps when network reconnects within retry window")
@@ -322,14 +332,18 @@ struct LaunchCoordinatorTests {
         let mockSuppressor = MockWindowSuppressor()
         let mockNetwork = MockNetworkMonitor(isConnected: false)
 
-        let coordinator = LaunchCoordinator(
+        let coordinator = StartupRunCoordinator(
             workspaceManager: mockWorkspace,
             windowSuppressor: mockSuppressor,
             networkMonitor: mockNetwork,
-            offlineTimeout: .milliseconds(20),
-            deferredRetryDuration: .milliseconds(200),
+            offlineTimeout: .seconds(60),
+            deferredRetryDuration: .seconds(900),
             sleep: { duration in
-                try await Task.sleep(for: duration)
+                if duration == .seconds(60) {
+                    return
+                }
+                // Hold deferred retry window until reconnected
+                try await Task.sleep(for: .seconds(100))
             }
         )
 
@@ -343,22 +357,23 @@ struct LaunchCoordinatorTests {
 
         coordinator.startStartupRun(for: [app])
 
-        // Wait for offline timeout to fire and skip app
-        for _ in 0..<30 {
-            if coordinator.networkStatus == "Skipped (Offline)" { break }
-            try await Task.sleep(for: .milliseconds(10))
+        for _ in 0..<10 {
+            if coordinator.state.phase == .deferredRetry { break }
+            await Task.yield()
         }
-        #expect(coordinator.networkStatus == "Skipped (Offline)")
+
+        #expect(coordinator.state.skippedAppIds.contains(app.id))
+        #expect(coordinator.state.phase == .deferredRetry)
         #expect(mockSuppressor.launchedApps.isEmpty)
 
-        // Now within the deferred retry window, simulate network reconnection
+        // Now within deferred retry window, simulate network reconnection
         mockNetwork.simulateNetworkChange(isConnected: true)
-        for _ in 0..<30 {
+        for _ in 0..<10 {
             if !mockSuppressor.launchedApps.isEmpty { break }
-            try await Task.sleep(for: .milliseconds(10))
+            await Task.yield()
         }
 
-        #expect(coordinator.networkStatus == "Network connected")
+        #expect(coordinator.state.isNetworkConnected == true)
         #expect(mockSuppressor.launchedApps.count == 1)
         #expect(mockSuppressor.launchedApps.first?.id == app.id)
     }
@@ -369,14 +384,15 @@ struct LaunchCoordinatorTests {
         let mockSuppressor = MockWindowSuppressor()
         let mockNetwork = MockNetworkMonitor(isConnected: false)
 
-        let coordinator = LaunchCoordinator(
+        let coordinator = StartupRunCoordinator(
             workspaceManager: mockWorkspace,
             windowSuppressor: mockSuppressor,
             networkMonitor: mockNetwork,
-            offlineTimeout: .milliseconds(20),
-            deferredRetryDuration: .milliseconds(40),
-            sleep: { duration in
-                try await Task.sleep(for: duration)
+            offlineTimeout: .seconds(60),
+            deferredRetryDuration: .seconds(900),
+            sleep: { _ in
+                // Instant sleep allows offline timeout and deferred retry window to expire immediately
+                return
             }
         )
 
@@ -390,19 +406,20 @@ struct LaunchCoordinatorTests {
 
         coordinator.startStartupRun(for: [app])
 
-        // Wait for offline timeout (20ms) + deferred retry window (40ms) to fully expire
-        for _ in 0..<40 {
-            if mockNetwork.stopMonitoringCallCount >= 2 { break }
-            try await Task.sleep(for: .milliseconds(10))
+        for _ in 0..<20 {
+            if mockNetwork.stopMonitoringCallCount >= 1 && coordinator.state.phase == .idle { break }
+            await Task.yield()
         }
 
-        #expect(coordinator.networkStatus == "Skipped (Offline)")
+        #expect(coordinator.state.phase == .idle)
+        #expect(mockSuppressor.launchedApps.isEmpty)
+        #expect(mockNetwork.stopMonitoringCallCount >= 1)
+
         // Connecting AFTER the deferred retry window expired should NOT trigger launch
         mockNetwork.simulateNetworkChange(isConnected: true)
-        try await Task.sleep(for: .milliseconds(30))
+        await Task.yield()
 
         #expect(mockSuppressor.launchedApps.isEmpty)
-        #expect(mockNetwork.stopMonitoringCallCount >= 2)
     }
 
     @Test("Conjunction: when network connects before delay finishes, launch occurs at delay end")
@@ -423,7 +440,7 @@ struct LaunchCoordinatorTests {
         }
         let counter = DelayCounter()
 
-        let coordinator = LaunchCoordinator(
+        let coordinator = StartupRunCoordinator(
             workspaceManager: mockWorkspace,
             windowSuppressor: mockSuppressor,
             networkMonitor: mockNetwork,
@@ -431,7 +448,6 @@ struct LaunchCoordinatorTests {
             sleep: { _ in
                 let current = counter.increment()
                 if current == 1 {
-                    // Connect midway through delay
                     await MainActor.run {
                         mockNetwork.simulateNetworkChange(isConnected: true)
                     }
@@ -450,13 +466,13 @@ struct LaunchCoordinatorTests {
 
         coordinator.startStartupRun(for: [app])
 
-        while coordinator.isRunning {
+        while coordinator.state.phase == .running {
             await Task.yield()
         }
 
         #expect(mockSuppressor.launchedApps.count == 1)
         #expect(mockSuppressor.launchedApps.first?.id == app.id)
-        #expect(coordinator.networkStatus == "Network connected")
+        #expect(coordinator.state.isNetworkConnected == true)
     }
 
     @Test("Conjunction: when delay finishes before network connects, launch waits for network")
@@ -465,13 +481,17 @@ struct LaunchCoordinatorTests {
         let mockSuppressor = MockWindowSuppressor()
         let mockNetwork = MockNetworkMonitor(isConnected: false)
 
-        let coordinator = LaunchCoordinator(
+        let coordinator = StartupRunCoordinator(
             workspaceManager: mockWorkspace,
             windowSuppressor: mockSuppressor,
             networkMonitor: mockNetwork,
             offlineTimeout: .seconds(60),
-            sleep: { _ in
-                await Task.yield()
+            sleep: { duration in
+                if duration >= .seconds(60) {
+                    try await Task.sleep(for: .seconds(100))
+                } else {
+                    await Task.yield()
+                }
             }
         )
 
@@ -485,26 +505,24 @@ struct LaunchCoordinatorTests {
 
         coordinator.startStartupRun(for: [app])
 
-        // Allow delay of 1s to tick down to 0
-        while coordinator.remainingDelays[app.id] != nil {
+        while coordinator.state.remainingDelays[app.id] != nil {
             await Task.yield()
         }
 
-        // App should be waiting for network, not launched yet
-        #expect(coordinator.remainingDelays[app.id] == nil)
-        #expect(coordinator.statusSummary == "Waiting for network...")
+        #expect(coordinator.state.remainingDelays[app.id] == nil)
+        #expect(coordinator.state.waitingForNetworkAppIds.contains(app.id))
         #expect(mockSuppressor.launchedApps.isEmpty)
 
         // Now connect network
         mockNetwork.simulateNetworkChange(isConnected: true)
-        for _ in 0..<20 {
+        for _ in 0..<10 {
             if mockSuppressor.launchedApps.count == 1 { break }
-            try await Task.sleep(for: .milliseconds(10))
+            await Task.yield()
         }
 
         #expect(mockSuppressor.launchedApps.count == 1)
         #expect(mockSuppressor.launchedApps.first?.id == app.id)
-        #expect(coordinator.networkStatus == "Network connected")
+        #expect(coordinator.state.isNetworkConnected == true)
     }
 
     @Test("cancelAll cleanly stops network monitoring")
@@ -513,7 +531,7 @@ struct LaunchCoordinatorTests {
         let mockSuppressor = MockWindowSuppressor()
         let mockNetwork = MockNetworkMonitor(isConnected: false)
 
-        let coordinator = LaunchCoordinator(
+        let coordinator = StartupRunCoordinator(
             workspaceManager: mockWorkspace,
             windowSuppressor: mockSuppressor,
             networkMonitor: mockNetwork,
@@ -559,7 +577,7 @@ struct LaunchCoordinatorTests {
             isEnabled: true
         )
 
-        let coordinator = LaunchCoordinator(
+        let coordinator = StartupRunCoordinator(
             workspaceManager: mockWorkspace,
             windowSuppressor: mockSuppressor,
             networkMonitor: mockNetwork,
@@ -567,7 +585,10 @@ struct LaunchCoordinatorTests {
         )
 
         coordinator.startStartupRun(for: [app1, app2])
-        try await Task.sleep(for: .milliseconds(30))
+        for _ in 0..<10 {
+            if mockSuppressor.launchedApps.count == 2 { break }
+            await Task.yield()
+        }
 
         #expect(mockSuppressor.launchedApps.count == 2)
         #expect(mockSuppressor.launchedApps.contains { $0.id == app1.id })
@@ -589,7 +610,7 @@ struct LaunchCoordinatorTests {
             isEnabled: true
         )
 
-        let coordinator = LaunchCoordinator(
+        let coordinator = StartupRunCoordinator(
             workspaceManager: mockWorkspace,
             windowSuppressor: mockSuppressor,
             networkMonitor: mockNetwork,
@@ -597,7 +618,10 @@ struct LaunchCoordinatorTests {
         )
 
         coordinator.startStartupRun(for: [app])
-        try await Task.sleep(for: .milliseconds(30))
+        for _ in 0..<10 {
+            if mockSuppressor.launchedApps.count == 1 { break }
+            await Task.yield()
+        }
 
         #expect(mockSuppressor.launchedApps.count == 1)
 
@@ -612,7 +636,7 @@ struct LaunchCoordinatorTests {
         let mockSuppressor = MockWindowSuppressor()
         let mockNetwork = MockNetworkMonitor(isConnected: true)
 
-        let coordinator = LaunchCoordinator(
+        let coordinator = StartupRunCoordinator(
             workspaceManager: mockWorkspace,
             windowSuppressor: mockSuppressor,
             networkMonitor: mockNetwork,
@@ -624,4 +648,3 @@ struct LaunchCoordinatorTests {
         #expect(mockSuppressor.cancelAllCallCount == 1)
     }
 }
-

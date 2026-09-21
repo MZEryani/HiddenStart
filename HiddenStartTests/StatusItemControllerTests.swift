@@ -138,7 +138,7 @@ struct StatusItemControllerTests {
         try store.addDirectlyForTesting(movedApp)
 
         let suppressor = MockWindowSuppressor()
-        let coordinator = LaunchCoordinator(
+        let coordinator = StartupRunCoordinator(
             workspaceManager: mockWorkspace,
             windowSuppressor: suppressor,
             networkMonitor: MockNetworkMonitor(isConnected: true),
@@ -149,7 +149,7 @@ struct StatusItemControllerTests {
             managedAppStore: store,
             workspaceManager: mockWorkspace,
             windowSuppressor: suppressor,
-            launchCoordinator: coordinator
+            startupRunCoordinator: coordinator
         )
 
         let controller = StatusItemController(
