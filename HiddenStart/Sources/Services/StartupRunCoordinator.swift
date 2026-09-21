@@ -396,7 +396,12 @@ public final class StartupRunCoordinator: ObservableObject, StartupRunCoordinati
         }
     }
 
+    public func launchImmediately(app: ManagedApp) async throws {
+        try await self.windowSuppressor.launch(app: app)
+    }
+
     private func launchResolvedApp(_ app: ManagedApp) async {
         try? await self.windowSuppressor.launch(app: app)
     }
 }
+

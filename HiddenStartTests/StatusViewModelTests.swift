@@ -8,15 +8,6 @@ import AppKit
 @testable import HiddenStart
 
 @MainActor
-final class MockAppTerminator: AppTerminating {
-    private(set) var terminateCalled = false
-
-    func terminate() {
-        terminateCalled = true
-    }
-}
-
-@MainActor
 final class MockManagedAppStore: ManagedAppStoring {
     var apps: [ManagedApp] = []
     var saveCallCount = 0
@@ -87,8 +78,7 @@ final class MockManagedAppStore: ManagedAppStoring {
 struct StatusViewModelTests {
     @Test("Default initialization has expected title and status")
     func defaultInitialization() {
-        let mockTerminator = MockAppTerminator()
-        let viewModel = StatusViewModel(terminator: mockTerminator)
+        let viewModel = StatusViewModel()
 
         #expect(viewModel.title == "HiddenStart")
         #expect(viewModel.statusMessage == "Ready")
@@ -96,29 +86,31 @@ struct StatusViewModelTests {
 
     @Test("Custom status message is preserved")
     func customStatusMessage() {
-        let mockTerminator = MockAppTerminator()
-        let viewModel = StatusViewModel(statusMessage: "3 apps queued", terminator: mockTerminator)
+        let viewModel = StatusViewModel(statusMessage: "3 apps queued")
 
         #expect(viewModel.statusMessage == "3 apps queued")
     }
 
     @Test("Quit delegates to terminator")
     func quitDelegatesToTerminator() {
-        let mockTerminator = MockAppTerminator()
-        let viewModel = StatusViewModel(terminator: mockTerminator)
+        var terminateCalled = false
+        let viewModel = StatusViewModel(terminateApp: { terminateCalled = true })
 
-        #expect(!mockTerminator.terminateCalled)
+        #expect(!terminateCalled)
         viewModel.quit()
-        #expect(mockTerminator.terminateCalled)
+        #expect(terminateCalled)
     }
 
     @Test("Adding application updates managedApps and saves to store")
     func testAddApplication() async {
         let store = MockManagedAppStore()
-        let picker = MockApplicationPicker()
+        var selectedURL: URL? = URL(fileURLWithPath: "/Applications/Discord.app")
+        let picker = ApplicationPicker(
+            appActivator: { _ in },
+            panelPresenter: { _ in (.OK, selectedURL) }
+        )
         let discordApp = ManagedApp(name: "Discord", bundlePath: "/Applications/Discord.app", bundleIdentifier: "com.hnc.discord", customArguments: "")
         store.appToReturnFromAddApp = discordApp
-        picker.urlToReturn = URL(fileURLWithPath: "/Applications/Discord.app")
 
         let viewModel = StatusViewModel(
             managedAppStore: store,
@@ -135,10 +127,11 @@ struct StatusViewModelTests {
 
         let slackApp = ManagedApp(name: "Slack", bundlePath: "/Applications/Slack.app")
         store.appToReturnFromAddApp = slackApp
-        picker.urlToReturn = URL(fileURLWithPath: "/Applications/Slack.app")
+        selectedURL = URL(fileURLWithPath: "/Applications/Slack.app")
         await viewModel.addApplication()
         #expect(viewModel.statusMessage == "Added Slack")
     }
+
 
     @Test("Removing application removes from store and updates managedApps")
     func testRemoveApplication() {
@@ -168,39 +161,42 @@ struct StatusViewModelTests {
         #expect(store.saveCallCount == 1)
     }
 
-    @Test("Test launch executes via workspace manager")
-    func testLaunchApp() async {
-        let workspace = MockWorkspaceManager()
-        let app = ManagedApp(
+    @Test("Test launch passes configured app settings to launch coordinator")
+    func testLaunchPassesConfiguredAppSettings() async {
+        let coordinator = MockStartupRunCoordinator()
+        let storeApp = ManagedApp(
             name: "Steam",
             bundlePath: "/Applications/Steam.app",
-            launchHidden: true,
-            customArguments: "-silent"
+            launchHidden: false,
+            customArguments: ""
         )
-        let store = MockManagedAppStore(apps: [app])
-        let viewModel = StatusViewModel(managedAppStore: store, workspaceManager: workspace)
+        let store = MockManagedAppStore(apps: [storeApp])
+        let viewModel = StatusViewModel(managedAppStore: store, startupRunCoordinator: coordinator)
 
-        await viewModel.testLaunch(app: app)
+        var editedApp = storeApp
+        editedApp.launchHidden = true
+        editedApp.customArguments = "-silent"
 
-        #expect(workspace.openedURLs.count == 1)
-        #expect(workspace.openedURLs.first == app.bundleURL)
-        #expect(workspace.configurations.first?.hides == true)
-        #expect(workspace.configurations.first?.activates == false)
-        #expect(workspace.configurations.first?.arguments == ["-silent"])
+        await viewModel.testLaunch(app: editedApp)
+
+        #expect(coordinator.launchImmediatelyCallCount == 1)
+        #expect(coordinator.lastAppLaunchedImmediately?.launchHidden == true)
+        #expect(coordinator.lastAppLaunchedImmediately?.customArguments == "-silent")
         #expect(viewModel.statusMessage == "Test launch triggered for Steam")
     }
 
-    @Test("Test launch delegates to window suppressor")
-    func testLaunchDelegatesToSuppressor() async {
-        let suppressor = MockWindowSuppressor()
+
+    @Test("Test launch delegates to startup run coordinator")
+    func testLaunchDelegatesToCoordinator() async {
+        let coordinator = MockStartupRunCoordinator()
         let app = ManagedApp(name: "Discord", bundlePath: "/Applications/Discord.app", launchHidden: true)
         let store = MockManagedAppStore(apps: [app])
-        let viewModel = StatusViewModel(managedAppStore: store, windowSuppressor: suppressor)
+        let viewModel = StatusViewModel(managedAppStore: store, startupRunCoordinator: coordinator)
 
         await viewModel.testLaunch(app: app)
 
-        #expect(suppressor.launchedApps.count == 1)
-        #expect(suppressor.launchedApps.first?.id == app.id)
+        #expect(coordinator.launchImmediatelyCallCount == 1)
+        #expect(coordinator.lastAppLaunchedImmediately?.id == app.id)
         #expect(viewModel.statusMessage == "Test launch triggered for Discord")
     }
 
@@ -244,15 +240,19 @@ struct StatusViewModelTests {
 
     @Test("Quitting cancels all in-flight launches")
     func quittingCancelsAllLaunches() {
-        let mockTerminator = MockAppTerminator()
+        var terminateCalled = false
         let coordinator = MockStartupRunCoordinator()
-        let viewModel = StatusViewModel(terminator: mockTerminator, startupRunCoordinator: coordinator)
+        let viewModel = StatusViewModel(
+            startupRunCoordinator: coordinator,
+            terminateApp: { terminateCalled = true }
+        )
 
         viewModel.quit()
 
         #expect(coordinator.cancelAllCallCount == 1)
-        #expect(mockTerminator.terminateCalled)
+        #expect(terminateCalled)
     }
+
 
     @Test("Updating application updates store and managedApps list")
     func updateApplicationUpdatesStore() {
@@ -345,37 +345,36 @@ struct StatusViewModelTests {
 
     @Test("toggleAutoStart registers when disabled and unregisters when enabled")
     func testToggleAutoStart() {
-        let mockAutoStart = MockAutoStartManager(isEnabled: false, status: .notRegistered)
-        let viewModel = StatusViewModel(autoStartManager: mockAutoStart)
+        let mockService = MockAutoStartService(status: .notRegistered)
+        let autoStart = AutoStartManager(service: mockService)
+        let viewModel = StatusViewModel(autoStartManager: autoStart)
 
         #expect(viewModel.isAutoStartEnabled == false)
 
         viewModel.toggleAutoStart()
 
-        #expect(mockAutoStart.toggleCalled == true)
+        #expect(mockService.registerCalled == true)
         #expect(viewModel.isAutoStartEnabled == true)
         #expect(viewModel.autoStartStatus == .enabled)
 
         viewModel.toggleAutoStart()
 
+        #expect(mockService.unregisterCalled == true)
         #expect(viewModel.isAutoStartEnabled == false)
         #expect(viewModel.autoStartStatus == .notRegistered)
     }
 
     @Test("AutoStart with requiresApproval sets flag and opens settings")
     func testAutoStartRequiresApproval() {
-        let mockAutoStart = MockAutoStartManager(
-            isEnabled: false,
-            status: .requiresApproval,
-            requiresApproval: true
-        )
-        let viewModel = StatusViewModel(autoStartManager: mockAutoStart)
+        let mockService = MockAutoStartService(status: .requiresApproval)
+        let autoStart = AutoStartManager(service: mockService)
+        let viewModel = StatusViewModel(autoStartManager: autoStart)
 
         #expect(viewModel.autoStartRequiresApproval == true)
         #expect(viewModel.isAutoStartEnabled == false)
 
         viewModel.openSystemSettingsLoginItems()
-        #expect(mockAutoStart.openSystemSettingsCalled == true)
+        #expect(mockService.openSystemSettingsCalled == true)
     }
 
     @Test("ViewModel auto-heals moved app on load and updates store")
@@ -433,19 +432,20 @@ struct StatusViewModelTests {
             bundleIdentifier: "com.example.ghost"
         )
         let store = MockManagedAppStore(apps: [missingApp], missingIds: [missingApp.id])
-        let suppressor = MockWindowSuppressor()
+        let coordinator = MockStartupRunCoordinator()
 
         let viewModel = StatusViewModel(
             managedAppStore: store,
-            windowSuppressor: suppressor
+            startupRunCoordinator: coordinator
         )
 
         await viewModel.testLaunch(app: missingApp)
 
-        #expect(suppressor.launchedApps.isEmpty)
+        #expect(coordinator.launchImmediatelyCallCount == 0)
         #expect(viewModel.statusMessage == "Launch failed: Application not found")
         #expect(viewModel.isAppMissing(missingApp) == true)
     }
+
 
     @Test("Startup run resolves and heals multiple managed apps before launching")
     func startupRunHealsAndLaunchesMultipleApps() throws {

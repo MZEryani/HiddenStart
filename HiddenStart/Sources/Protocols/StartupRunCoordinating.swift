@@ -34,6 +34,8 @@ public protocol StartupRunCoordinating: AnyObject, Sendable {
     var state: StartupRunState { get }
     var statePublisher: AnyPublisher<StartupRunState, Never> { get }
     func startStartupRun(for apps: [ManagedApp])
+    func launchImmediately(app: ManagedApp) async throws
     func cancelLaunch(for appWithId: UUID)
     func cancelAll()
 }
+

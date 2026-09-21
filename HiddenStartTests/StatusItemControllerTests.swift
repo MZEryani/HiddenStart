@@ -147,10 +147,11 @@ struct StatusItemControllerTests {
 
         let viewModel = StatusViewModel(
             managedAppStore: store,
-            workspaceManager: mockWorkspace,
-            windowSuppressor: suppressor,
-            startupRunCoordinator: coordinator
+            startupRunCoordinator: coordinator,
+            workspaceManager: mockWorkspace
         )
+
+
 
         let controller = StatusItemController(
             viewModel: viewModel,

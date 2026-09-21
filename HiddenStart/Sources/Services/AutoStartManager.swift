@@ -2,6 +2,35 @@ import Foundation
 import Combine
 import ServiceManagement
 
+public enum AutoStartStatus: Equatable, Sendable {
+    case enabled
+    case requiresApproval
+    case notRegistered
+    case notFound
+
+    public init(serviceStatus: SMAppService.Status) {
+        switch serviceStatus {
+        case .enabled:
+            self = .enabled
+        case .requiresApproval:
+            self = .requiresApproval
+        case .notRegistered:
+            self = .notRegistered
+        case .notFound:
+            self = .notFound
+        @unknown default:
+            self = .notRegistered
+        }
+    }
+}
+
+public protocol AutoStartServiceRepresentable: AnyObject, Sendable {
+    var status: SMAppService.Status { get }
+    func register() throws
+    func unregister() throws
+    func openSystemSettingsLoginItems()
+}
+
 public final class SystemAutoStartService: AutoStartServiceRepresentable, @unchecked Sendable {
     private let service: SMAppService
 
@@ -27,7 +56,8 @@ public final class SystemAutoStartService: AutoStartServiceRepresentable, @unche
 }
 
 @MainActor
-public final class AutoStartManager: ObservableObject, AutoStartManaging {
+public final class AutoStartManager: ObservableObject {
+
     @Published public private(set) var isEnabled: Bool = false
     @Published public private(set) var status: AutoStartStatus = .notRegistered
     @Published public private(set) var requiresApproval: Bool = false

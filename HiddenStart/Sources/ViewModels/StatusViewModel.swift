@@ -13,40 +13,36 @@ public final class StatusViewModel: ObservableObject {
     @Published public var isAutoStartEnabled: Bool = false
     @Published public var autoStartRequiresApproval: Bool = false
 
-    private let terminator: AppTerminating
     public let managedAppStore: ManagedAppStoring
-    private let workspaceManager: WorkspaceManaging
-    private let appPicker: ApplicationPickerSelecting
-    private let windowSuppressor: WindowSuppressing
-    public let autoStartManager: AutoStartManaging
     public let startupRunCoordinator: StartupRunCoordinating
+    public let autoStartManager: AutoStartManager
+    private let appPicker: ApplicationPicker
+    private let workspaceManager: WorkspaceManaging
+    private let terminateApp: @MainActor () -> Void
     private var previousPhase: StartupRunState.Phase?
     private var cancellables = Set<AnyCancellable>()
 
     public init(
         title: String = "HiddenStart",
         statusMessage: String = "Ready",
-        terminator: AppTerminating = SystemAppTerminator(),
         managedAppStore: ManagedAppStoring? = nil,
+        startupRunCoordinator: StartupRunCoordinating? = nil,
+        autoStartManager: AutoStartManager? = nil,
+        appPicker: ApplicationPicker? = nil,
         workspaceManager: WorkspaceManaging? = nil,
-        appPicker: ApplicationPickerSelecting? = nil,
-        windowSuppressor: WindowSuppressing? = nil,
-        autoStartManager: AutoStartManaging? = nil,
-        startupRunCoordinator: StartupRunCoordinating? = nil
+        terminateApp: @escaping @MainActor () -> Void = { NSApp.terminate(nil) }
     ) {
         self.title = title
         self.statusMessage = statusMessage
-        self.terminator = terminator
+        self.terminateApp = terminateApp
 
         let resolvedWorkspace = workspaceManager ?? SystemWorkspaceManager()
         let resolvedStore = managedAppStore ?? ManagedAppStore(workspaceManager: resolvedWorkspace)
-        let resolvedSuppressor = windowSuppressor ?? WindowSuppressionEngine(workspaceManager: resolvedWorkspace)
         let resolvedAutoStart = autoStartManager ?? AutoStartManager()
 
         self.managedAppStore = resolvedStore
         self.workspaceManager = resolvedWorkspace
         self.appPicker = appPicker ?? ApplicationPicker()
-        self.windowSuppressor = resolvedSuppressor
         self.autoStartManager = resolvedAutoStart
 
         self.autoStartStatus = resolvedAutoStart.status
@@ -54,11 +50,11 @@ public final class StatusViewModel: ObservableObject {
         self.autoStartRequiresApproval = resolvedAutoStart.hasApprovalIssue
 
         let resolvedCoordinator = startupRunCoordinator ?? StartupRunCoordinator(
-            workspaceManager: resolvedWorkspace,
-            windowSuppressor: resolvedSuppressor
+            workspaceManager: resolvedWorkspace
         )
         self.startupRunCoordinator = resolvedCoordinator
         self.networkStatus = Self.deriveNetworkStatus(from: resolvedCoordinator.state)
+
 
         if managedAppStore == nil {
             try? resolvedStore.load()
@@ -126,8 +122,9 @@ public final class StatusViewModel: ObservableObject {
 
     public func quit() {
         startupRunCoordinator.cancelAll()
-        terminator.terminate()
+        terminateApp()
     }
+
 
     public func startStartupRun() {
         managedAppStore.refreshAppHealth()
@@ -232,19 +229,24 @@ public final class StatusViewModel: ObservableObject {
             return
         }
 
-        guard let appToLaunch = managedApps.first(where: { $0.id == app.id }) else {
+        guard let storeApp = managedApps.first(where: { $0.id == app.id }) else {
             statusMessage = "Launch failed: Application not found"
             return
         }
 
+        var appToLaunch = app
+        appToLaunch.bundlePath = storeApp.bundlePath
+
         statusMessage = "Launching \(appToLaunch.name)..."
+
         do {
-            try await windowSuppressor.launch(app: appToLaunch)
+            try await startupRunCoordinator.launchImmediately(app: appToLaunch)
             statusMessage = "Test launch triggered for \(appToLaunch.name)"
         } catch {
             statusMessage = "Launch failed: \(error.localizedDescription)"
         }
     }
+
 
     public func icon(for app: ManagedApp) -> NSImage {
         workspaceManager.icon(forFile: app.bundlePath)

@@ -647,4 +647,32 @@ struct StartupRunCoordinatorTests {
 
         #expect(mockSuppressor.cancelAllCallCount == 1)
     }
+
+    @Test("launchImmediately delegates to window suppressor and propagates error")
+    func launchImmediatelyDelegatesToSuppressor() async throws {
+        let mockWorkspace = MockWorkspaceManager()
+        let mockSuppressor = MockWindowSuppressor()
+        let mockNetwork = MockNetworkMonitor(isConnected: true)
+
+        let coordinator = StartupRunCoordinator(
+            workspaceManager: mockWorkspace,
+            windowSuppressor: mockSuppressor,
+            networkMonitor: mockNetwork,
+            sleep: { _ in }
+        )
+
+        let app = ManagedApp(name: "Discord", bundlePath: "/Applications/Discord.app")
+        try await coordinator.launchImmediately(app: app)
+
+        #expect(mockSuppressor.launchedApps.count == 1)
+        #expect(mockSuppressor.launchedApps.first?.id == app.id)
+
+        struct TestLaunchError: Error, Equatable {}
+        mockSuppressor.shouldThrowError = TestLaunchError()
+
+        await #expect(throws: TestLaunchError.self) {
+            try await coordinator.launchImmediately(app: app)
+        }
+    }
 }
+

@@ -14,12 +14,24 @@ public final class MockStartupRunCoordinator: StartupRunCoordinating {
     public var lastAppsStarted: [ManagedApp] = []
     public var cancelledAppIds: [UUID] = []
     public var cancelAllCallCount: Int = 0
+    public var launchImmediatelyCallCount: Int = 0
+    public var lastAppLaunchedImmediately: ManagedApp?
+    public var launchImmediatelyError: (any Error)?
 
     public init(initialState: StartupRunState = StartupRunState()) {
         self.state = initialState
     }
 
+    public func launchImmediately(app: ManagedApp) async throws {
+        launchImmediatelyCallCount += 1
+        lastAppLaunchedImmediately = app
+        if let launchImmediatelyError {
+            throw launchImmediatelyError
+        }
+    }
+
     public func startStartupRun(for apps: [ManagedApp]) {
+
         startStartupRunCallCount += 1
         lastAppsStarted = apps
     }

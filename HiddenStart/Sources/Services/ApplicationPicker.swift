@@ -2,7 +2,7 @@ import AppKit
 import UniformTypeIdentifiers
 
 @MainActor
-public final class ApplicationPicker: ApplicationPickerSelecting {
+public final class ApplicationPicker {
     private let appActivator: @MainActor (Bool) -> Void
     private let panelFactory: @MainActor () -> NSOpenPanel
     private let panelPresenter: @MainActor (NSOpenPanel) async -> (NSApplication.ModalResponse, URL?)
