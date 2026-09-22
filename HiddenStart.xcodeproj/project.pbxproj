@@ -43,6 +43,9 @@
 		FD677C15ADEE53A300FA7CE9 /* MockWorkspaceManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A9AC978E0D6290C4228A94E4 /* MockWorkspaceManager.swift */; };
 		B10000000000000000000003 /* AutoStartManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000003 /* AutoStartManager.swift */; };
 		B10000000000000000000006 /* AutoStartManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000006 /* AutoStartManagerTests.swift */; };
+		B10000000000000000000007 /* StatusPresenter.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000007 /* StatusPresenter.swift */; };
+		B10000000000000000000008 /* StatusPresenterTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000008 /* StatusPresenterTests.swift */; };
+		B10000000000000000000009 /* MockManagedAppStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000009 /* MockManagedAppStore.swift */; };
 
 /* End PBXBuildFile section */
 
@@ -94,6 +97,9 @@
 		FCFD597B5F61FADF40004603 /* MockNetworkMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockNetworkMonitor.swift; sourceTree = "<group>"; };
 		A10000000000000000000003 /* AutoStartManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AutoStartManager.swift; sourceTree = "<group>"; };
 		A10000000000000000000006 /* AutoStartManagerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AutoStartManagerTests.swift; sourceTree = "<group>"; };
+		A10000000000000000000007 /* StatusPresenter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatusPresenter.swift; sourceTree = "<group>"; };
+		A10000000000000000000008 /* StatusPresenterTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatusPresenterTests.swift; sourceTree = "<group>"; };
+		A10000000000000000000009 /* MockManagedAppStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockManagedAppStore.swift; sourceTree = "<group>"; };
 
 /* End PBXFileReference section */
 
@@ -153,6 +159,7 @@
 				EC2C92870F007A9CC5CA0AEF /* MockRunningApp.swift */,
 				716F3B1C0FC5385AFE754FE1 /* MockWindowSuppressor.swift */,
 				A9AC978E0D6290C4228A94E4 /* MockWorkspaceManager.swift */,
+				A10000000000000000000009 /* MockManagedAppStore.swift */,
 			);
 
 			path = Mocks;
@@ -161,6 +168,7 @@
 		C130A8D3851271FD5D3198AC /* ViewModels */ = {
 			isa = PBXGroup;
 			children = (
+				A10000000000000000000007 /* StatusPresenter.swift */,
 				9F68D8A04212B3D862BCDBE2 /* StatusViewModel.swift */,
 			);
 			path = ViewModels;
@@ -180,6 +188,7 @@
 			children = (
 				BDCCC5E483281D4332BB19F6 /* ApplicationPickerTests.swift */,
 				A10000000000000000000006 /* AutoStartManagerTests.swift */,
+				A10000000000000000000008 /* StatusPresenterTests.swift */,
 				E726CE535CBDFFD9EB666592 /* StartupRunCoordinatorTests.swift */,
 				658122A75EF833E7295C1CD3 /* ManagedAppTests.swift */,
 				9645DB28FCB47F1096EA7094 /* NetworkMonitorTests.swift */,
@@ -311,6 +320,8 @@
 				03B40C37C3B675988E9B1CD5 /* WindowSuppressionEngineTests.swift in Sources */,
 				C912E9A7DFE1E5AC9271320F /* WorkspaceManagingTests.swift in Sources */,
 				B10000000000000000000006 /* AutoStartManagerTests.swift in Sources */,
+				B10000000000000000000008 /* StatusPresenterTests.swift in Sources */,
+				B10000000000000000000009 /* MockManagedAppStore.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -319,6 +330,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				B10000000000000000000003 /* AutoStartManager.swift in Sources */,
+				B10000000000000000000007 /* StatusPresenter.swift in Sources */,
 				31279009B3F72712424A06F4 /* AppDelegate.swift in Sources */,
 				92876BFBDC62BEFA861E88B9 /* AppInspectorSheet.swift in Sources */,
 				7D306DC739F016A6F1C8B3C7 /* AppPreset.swift in Sources */,

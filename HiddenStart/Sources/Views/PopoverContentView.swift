@@ -121,12 +121,12 @@ public struct PopoverContentView: View {
     }
 
     private var networkStatusColor: Color {
-        switch viewModel.networkStatus {
-        case "Network connected":
+        switch viewModel.networkStatusLevel {
+        case .connected:
             return .green
-        case "Skipped (Offline)":
+        case .skippedOffline:
             return .orange
-        default:
+        case .waiting:
             return .secondary
         }
     }

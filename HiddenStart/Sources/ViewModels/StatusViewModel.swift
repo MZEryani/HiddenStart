@@ -7,6 +7,7 @@ public final class StatusViewModel: ObservableObject {
     public let title: String
     @Published public var statusMessage: String
     @Published public var networkStatus: String
+    @Published public var networkStatusLevel: NetworkStatusLevel
     @Published public var managedApps: [ManagedApp] = []
     @Published public var remainingDelays: [UUID: Int] = [:]
     @Published public var autoStartStatus: AutoStartStatus = .notRegistered
@@ -19,7 +20,7 @@ public final class StatusViewModel: ObservableObject {
     private let appPicker: ApplicationPicker
     private let workspaceManager: WorkspaceManaging
     private let terminateApp: @MainActor () -> Void
-    private var previousPhase: StartupRunState.Phase?
+    private var presenter: StatusPresenter
     private var cancellables = Set<AnyCancellable>()
 
     public init(
@@ -33,7 +34,6 @@ public final class StatusViewModel: ObservableObject {
         terminateApp: @escaping @MainActor () -> Void = { NSApp.terminate(nil) }
     ) {
         self.title = title
-        self.statusMessage = statusMessage
         self.terminateApp = terminateApp
 
         let resolvedWorkspace = workspaceManager ?? SystemWorkspaceManager()
@@ -53,7 +53,15 @@ public final class StatusViewModel: ObservableObject {
             workspaceManager: resolvedWorkspace
         )
         self.startupRunCoordinator = resolvedCoordinator
-        self.networkStatus = Self.deriveNetworkStatus(from: resolvedCoordinator.state)
+
+        let initialPresenter = StatusPresenter(
+            initialMessage: statusMessage,
+            initialLevel: StatusPresenter.deriveNetworkStatusLevel(from: resolvedCoordinator.state)
+        )
+        self.presenter = initialPresenter
+        self.statusMessage = initialPresenter.currentDisplay.message
+        self.networkStatusLevel = initialPresenter.currentDisplay.networkStatusLevel
+        self.networkStatus = initialPresenter.currentDisplay.networkStatusText
 
         if managedAppStore == nil {
             try? resolvedStore.load()
@@ -71,57 +79,13 @@ public final class StatusViewModel: ObservableObject {
             .receive(on: RunLoop.main)
             .sink { [weak self] state in
                 guard let self else { return }
-                self.remainingDelays = state.remainingDelays
-                self.networkStatus = Self.deriveNetworkStatus(from: state)
-
-                if let derivedMessage = Self.deriveStatusMessage(from: state, apps: self.managedApps) {
-                    if state.phase != .idle || self.previousPhase != nil || self.statusMessage == "Ready" {
-                        self.statusMessage = derivedMessage
-                    }
-                }
-                self.previousPhase = state.phase
+                let display = self.presenter.update(state: state, apps: self.managedApps)
+                self.remainingDelays = display.remainingDelays
+                self.networkStatusLevel = display.networkStatusLevel
+                self.networkStatus = display.networkStatusText
+                self.statusMessage = display.message
             }
             .store(in: &cancellables)
-    }
-
-    public static func deriveNetworkStatus(from state: StartupRunState) -> String {
-        if state.phase == .deferredRetry || !state.skippedAppIds.isEmpty {
-            return "Skipped (Offline)"
-        } else if !state.isNetworkConnected {
-            return "Waiting for network..."
-        } else {
-            return "Network connected"
-        }
-    }
-
-    public static func deriveStatusMessage(from state: StartupRunState, apps: [ManagedApp]) -> String? {
-        if !state.remainingDelays.isEmpty {
-            let sorted = state.remainingDelays.compactMap { (id, remaining) -> (String, Int)? in
-                guard let app = apps.first(where: { $0.id == id }) else { return nil }
-                return (app.name, remaining)
-            }.sorted { $0.1 < $1.1 }
-            if !sorted.isEmpty {
-                return sorted.map { "\($0.0) in \($0.1)s" }.joined(separator: ", ")
-            }
-        }
-
-        if !state.waitingForNetworkAppIds.isEmpty {
-            return "Waiting for network..."
-        }
-
-        if state.phase == .deferredRetry || (!state.skippedAppIds.isEmpty && state.phase == .idle) {
-            return "Skipped (Offline)"
-        }
-
-        if state.phase == .running {
-            return "Launching..."
-        }
-
-        if state.phase == .idle {
-            return "Ready"
-        }
-
-        return nil
     }
 
     public func quit() {
@@ -129,6 +93,11 @@ public final class StatusViewModel: ObservableObject {
         terminateApp()
     }
 
+
+    private func setActionMessage(_ message: String) {
+        let display = presenter.setActionMessage(message)
+        statusMessage = display.message
+    }
 
     public func startStartupRun() {
         let appsToLaunch = managedApps.filter { !managedAppStore.isMissing(appId: $0.id) }
@@ -144,7 +113,7 @@ public final class StatusViewModel: ObservableObject {
             try autoStartManager.toggle()
             syncAutoStartState()
         } catch {
-            statusMessage = "Failed to update login item: \(error.localizedDescription)"
+            setActionMessage("Failed to update login item: \(error.localizedDescription)")
             syncAutoStartState()
         }
     }
@@ -176,12 +145,12 @@ public final class StatusViewModel: ObservableObject {
         do {
             let newApp = try managedAppStore.addApp(at: url)
             if newApp.isDiscord {
-                statusMessage = "Added Discord (Launch Hidden configured; custom arguments empty)"
+                setActionMessage("Added Discord (Launch Hidden configured; custom arguments empty)")
             } else {
-                statusMessage = "Added \(newApp.name)"
+                setActionMessage("Added \(newApp.name)")
             }
         } catch {
-            statusMessage = "Failed to add application"
+            setActionMessage("Failed to add application")
         }
     }
 
@@ -189,9 +158,9 @@ public final class StatusViewModel: ObservableObject {
         startupRunCoordinator.cancelLaunch(for: id)
         do {
             try managedAppStore.remove(withId: id)
-            statusMessage = "Removed app"
+            setActionMessage("Removed app")
         } catch {
-            statusMessage = "Failed to remove app"
+            setActionMessage("Failed to remove app")
         }
     }
 
@@ -205,43 +174,42 @@ public final class StatusViewModel: ObservableObject {
         do {
             try managedAppStore.update(app)
         } catch {
-            statusMessage = "Failed to update app"
+            setActionMessage("Failed to update app")
         }
     }
 
     public func updateApplication(_ app: ManagedApp) {
         do {
             try managedAppStore.update(app)
-            statusMessage = "Updated \(app.name)"
+            setActionMessage("Updated \(app.name)")
         } catch {
-            statusMessage = "Failed to update \(app.name)"
+            setActionMessage("Failed to update \(app.name)")
         }
     }
 
     public func testLaunch(app: ManagedApp) async {
         if managedAppStore.isMissing(appId: app.id) {
-            statusMessage = "Launch failed: Application not found"
+            setActionMessage("Launch failed: Application not found")
             return
         }
 
         guard let storeApp = managedApps.first(where: { $0.id == app.id }) else {
-            statusMessage = "Launch failed: Application not found"
+            setActionMessage("Launch failed: Application not found")
             return
         }
 
         var appToLaunch = app
         appToLaunch.bundlePath = storeApp.bundlePath
 
-        statusMessage = "Launching \(appToLaunch.name)..."
+        setActionMessage("Launching \(appToLaunch.name)...")
 
         do {
             try await startupRunCoordinator.launchImmediately(app: appToLaunch)
-            statusMessage = "Test launch triggered for \(appToLaunch.name)"
+            setActionMessage("Test launch triggered for \(appToLaunch.name)")
         } catch {
-            statusMessage = "Launch failed: \(error.localizedDescription)"
+            setActionMessage("Launch failed: \(error.localizedDescription)")
         }
     }
-
 
     public func icon(for app: ManagedApp) -> NSImage {
         workspaceManager.icon(forFile: app.bundlePath)

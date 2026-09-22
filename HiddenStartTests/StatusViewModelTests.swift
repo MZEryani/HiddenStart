@@ -17,6 +17,7 @@ struct StatusViewModelTests {
 
         #expect(viewModel.title == "HiddenStart")
         #expect(viewModel.statusMessage == "Ready")
+        #expect(viewModel.networkStatusLevel == .waiting)
     }
 
     @Test("Custom status message is preserved")
@@ -224,12 +225,13 @@ struct StatusViewModelTests {
         #expect(viewModel.statusMessage == "Discord in 5s")
     }
 
-    @Test("Coordinator networkStatus updates viewModel networkStatus and statusMessage")
+    @Test("Coordinator networkStatus updates viewModel networkStatus, networkStatusLevel, and statusMessage")
     func networkStatusUpdatesViewModel() async {
         let coordinator = MockStartupRunCoordinator()
         let viewModel = StatusViewModel(startupRunCoordinator: coordinator)
 
         #expect(viewModel.networkStatus == "Network connected")
+        #expect(viewModel.networkStatusLevel == .connected)
 
         coordinator.state = StartupRunState(
             phase: .running,
@@ -239,6 +241,7 @@ struct StatusViewModelTests {
         await Task.yield()
 
         #expect(viewModel.networkStatus == "Waiting for network...")
+        #expect(viewModel.networkStatusLevel == .waiting)
         #expect(viewModel.statusMessage == "Waiting for network...")
 
         coordinator.state = StartupRunState(
@@ -249,7 +252,49 @@ struct StatusViewModelTests {
         await Task.yield()
 
         #expect(viewModel.networkStatus == "Skipped (Offline)")
+        #expect(viewModel.networkStatusLevel == .skippedOffline)
         #expect(viewModel.statusMessage == "Skipped (Offline)")
+    }
+
+    @Test("Action message from user interaction is preserved across coordinator idle pulses")
+    func actionMessagePreservedAcrossIdlePulses() async {
+        let coordinator = MockStartupRunCoordinator()
+        let app = ManagedApp(name: "Discord", bundlePath: "/Applications/Discord.app")
+        let store = MockManagedAppStore(apps: [app])
+        let viewModel = StatusViewModel(managedAppStore: store, startupRunCoordinator: coordinator)
+
+        viewModel.removeApplication(withId: app.id)
+        #expect(viewModel.statusMessage == "Removed app")
+
+        // Coordinator emits an idle pulse
+        coordinator.state = StartupRunState(
+            phase: .idle,
+            isNetworkConnected: true
+        )
+        await Task.yield()
+
+        #expect(viewModel.statusMessage == "Removed app")
+    }
+
+    @Test("Active startup run clears ViewModel action message and takes coordinator precedence")
+    func activeStartupRunClearsActionMessage() async {
+        let coordinator = MockStartupRunCoordinator()
+        let app = ManagedApp(name: "Discord", bundlePath: "/Applications/Discord.app")
+        let store = MockManagedAppStore(apps: [app])
+        let viewModel = StatusViewModel(managedAppStore: store, startupRunCoordinator: coordinator)
+
+        viewModel.removeApplication(withId: app.id)
+        #expect(viewModel.statusMessage == "Removed app")
+
+        // Coordinator begins running
+        coordinator.state = StartupRunState(
+            phase: .running,
+            remainingDelays: [:],
+            isNetworkConnected: true
+        )
+        await Task.yield()
+
+        #expect(viewModel.statusMessage == "Launching...")
     }
 
     @Test("Status message transitions through running to Ready when run completes")
