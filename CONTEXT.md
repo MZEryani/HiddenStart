@@ -35,3 +35,8 @@ _Avoid_: Reconnect watcher, delayed launch
 **Suppression Episode**:
 A single observable visual transition or focus-stealing event by a managed app during launch, which may emit multiple clustered system notifications.
 _Avoid_: Notification burst, suppression event, focus bounce
+
+**Auto-Start**:
+The system-level configuration that automatically launches HiddenStart upon user login via macOS ServiceManagement (`SMAppService`).
+_Avoid_: Login hook, launch daemon, autolauncher
+
