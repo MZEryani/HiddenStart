@@ -42,7 +42,6 @@
 		D88461F08798382E36244DAA /* ApplicationPickerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BDCCC5E483281D4332BB19F6 /* ApplicationPickerTests.swift */; };
 		FD677C15ADEE53A300FA7CE9 /* MockWorkspaceManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A9AC978E0D6290C4228A94E4 /* MockWorkspaceManager.swift */; };
 		B10000000000000000000003 /* AutoStartManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000003 /* AutoStartManager.swift */; };
-		B10000000000000000000005 /* MockAutoStartService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000005 /* MockAutoStartService.swift */; };
 		B10000000000000000000006 /* AutoStartManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000006 /* AutoStartManagerTests.swift */; };
 
 /* End PBXBuildFile section */
@@ -94,7 +93,6 @@
 		F4193478EDCE6097EDFA0073 /* WorkspaceManaging.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkspaceManaging.swift; sourceTree = "<group>"; };
 		FCFD597B5F61FADF40004603 /* MockNetworkMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockNetworkMonitor.swift; sourceTree = "<group>"; };
 		A10000000000000000000003 /* AutoStartManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AutoStartManager.swift; sourceTree = "<group>"; };
-		A10000000000000000000005 /* MockAutoStartService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockAutoStartService.swift; sourceTree = "<group>"; };
 		A10000000000000000000006 /* AutoStartManagerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AutoStartManagerTests.swift; sourceTree = "<group>"; };
 
 /* End PBXFileReference section */
@@ -150,7 +148,6 @@
 		B86CEB66724CB853DFD3C762 /* Mocks */ = {
 			isa = PBXGroup;
 			children = (
-				A10000000000000000000005 /* MockAutoStartService.swift */,
 				5646CBFD069D96CF2F5E898C /* MockStartupRunCoordinator.swift */,
 				FCFD597B5F61FADF40004603 /* MockNetworkMonitor.swift */,
 				EC2C92870F007A9CC5CA0AEF /* MockRunningApp.swift */,
@@ -313,7 +310,6 @@
 				AEBEA1C026E887B589DDCD2E /* StatusViewModelTests.swift in Sources */,
 				03B40C37C3B675988E9B1CD5 /* WindowSuppressionEngineTests.swift in Sources */,
 				C912E9A7DFE1E5AC9271320F /* WorkspaceManagingTests.swift in Sources */,
-				B10000000000000000000005 /* MockAutoStartService.swift in Sources */,
 				B10000000000000000000006 /* AutoStartManagerTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

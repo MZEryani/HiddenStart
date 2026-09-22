@@ -280,36 +280,53 @@ struct StatusViewModelTests {
 
     @Test("toggleAutoStart registers when disabled and unregisters when enabled")
     func testToggleAutoStart() {
-        let mockService = MockAutoStartService(status: .notRegistered)
-        let autoStart = AutoStartManager(service: mockService)
+        let autoStart = AutoStartManager(status: .notRegistered)
         let viewModel = StatusViewModel(autoStartManager: autoStart)
 
         #expect(viewModel.isAutoStartEnabled == false)
 
         viewModel.toggleAutoStart()
 
-        #expect(mockService.registerCalled == true)
         #expect(viewModel.isAutoStartEnabled == true)
         #expect(viewModel.autoStartStatus == .enabled)
 
         viewModel.toggleAutoStart()
 
-        #expect(mockService.unregisterCalled == true)
         #expect(viewModel.isAutoStartEnabled == false)
         #expect(viewModel.autoStartStatus == .notRegistered)
     }
 
     @Test("AutoStart with requiresApproval sets flag and opens settings")
     func testAutoStartRequiresApproval() {
-        let mockService = MockAutoStartService(status: .requiresApproval)
-        let autoStart = AutoStartManager(service: mockService)
+        var openSettingsCalled = false
+        let autoStart = AutoStartManager(
+            status: .requiresApproval,
+            openSettingsAction: { openSettingsCalled = true }
+        )
         let viewModel = StatusViewModel(autoStartManager: autoStart)
 
         #expect(viewModel.autoStartRequiresApproval == true)
         #expect(viewModel.isAutoStartEnabled == false)
 
         viewModel.openSystemSettingsLoginItems()
-        #expect(mockService.openSystemSettingsCalled == true)
+        #expect(openSettingsCalled == true)
+    }
+
+    @Test("toggleAutoStart sets statusMessage on failure")
+    func testToggleAutoStartFailure() {
+        struct TestError: LocalizedError {
+            var errorDescription: String? { "Operation not permitted" }
+        }
+        let autoStart = AutoStartManager(
+            status: .notRegistered,
+            registerAction: { throw TestError() }
+        )
+        let viewModel = StatusViewModel(autoStartManager: autoStart)
+
+        viewModel.toggleAutoStart()
+
+        #expect(viewModel.isAutoStartEnabled == false)
+        #expect(viewModel.statusMessage == "Failed to update login item: Operation not permitted")
     }
 
     @Test("ViewModel auto-heals moved app on load and updates store")

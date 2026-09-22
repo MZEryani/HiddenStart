@@ -24,37 +24,6 @@ public enum AutoStartStatus: Equatable, Sendable {
     }
 }
 
-public protocol AutoStartServiceRepresentable: AnyObject, Sendable {
-    var status: SMAppService.Status { get }
-    func register() throws
-    func unregister() throws
-    func openSystemSettingsLoginItems()
-}
-
-public final class SystemAutoStartService: AutoStartServiceRepresentable, @unchecked Sendable {
-    private let service: SMAppService
-
-    public init(service: SMAppService = .mainApp) {
-        self.service = service
-    }
-
-    public var status: SMAppService.Status {
-        service.status
-    }
-
-    public func register() throws {
-        try service.register()
-    }
-
-    public func unregister() throws {
-        try service.unregister()
-    }
-
-    public func openSystemSettingsLoginItems() {
-        SMAppService.openSystemSettingsLoginItems()
-    }
-}
-
 @MainActor
 public final class AutoStartManager: ObservableObject {
 
@@ -62,31 +31,62 @@ public final class AutoStartManager: ObservableObject {
     @Published public private(set) var status: AutoStartStatus = .notRegistered
     @Published public private(set) var requiresApproval: Bool = false
     @Published public private(set) var isDenied: Bool = false
+    @Published public private(set) var hasApprovalIssue: Bool = false
 
-    public var hasApprovalIssue: Bool {
-        requiresApproval || isDenied
+    private final class SimulatedState {
+        var status: SMAppService.Status
+        init(status: SMAppService.Status) {
+            self.status = status
+        }
     }
 
-    private let service: AutoStartServiceRepresentable
+    private let statusProvider: @MainActor () -> SMAppService.Status
+    private let performRegister: @MainActor () throws -> Void
+    private let performUnregister: @MainActor () throws -> Void
+    private let performOpenSettings: @MainActor () -> Void
 
-    public init(service: AutoStartServiceRepresentable = SystemAutoStartService()) {
-        self.service = service
+    public init(service: SMAppService = .mainApp) {
+        self.statusProvider = { service.status }
+        self.performRegister = { try service.register() }
+        self.performUnregister = { try service.unregister() }
+        self.performOpenSettings = { SMAppService.openSystemSettingsLoginItems() }
+        refreshStatus()
+    }
+
+    internal init(
+        status: SMAppService.Status = .notRegistered,
+        statusProvider: (@MainActor () -> SMAppService.Status)? = nil,
+        registerAction: (@MainActor () throws -> Void)? = nil,
+        unregisterAction: (@MainActor () throws -> Void)? = nil,
+        openSettingsAction: @escaping @MainActor () -> Void = {}
+    ) {
+        let state = SimulatedState(status: status)
+
+        if let statusProvider {
+            self.statusProvider = statusProvider
+        } else {
+            self.statusProvider = { state.status }
+        }
+        self.performRegister = registerAction ?? { state.status = .enabled }
+        self.performUnregister = unregisterAction ?? { state.status = .notRegistered }
+        self.performOpenSettings = openSettingsAction
         refreshStatus()
     }
 
     public func refreshStatus() {
-        let currentStatus = service.status
+        let currentStatus = statusProvider()
         self.status = AutoStartStatus(serviceStatus: currentStatus)
         self.isEnabled = (currentStatus == .enabled)
         self.requiresApproval = (currentStatus == .requiresApproval)
         if currentStatus == .enabled {
             self.isDenied = false
         }
+        self.hasApprovalIssue = requiresApproval || isDenied
     }
 
     public func register() throws {
         do {
-            try service.register()
+            try performRegister()
             self.isDenied = false
             refreshStatus()
         } catch {
@@ -98,7 +98,7 @@ public final class AutoStartManager: ObservableObject {
 
     public func unregister() throws {
         do {
-            try service.unregister()
+            try performUnregister()
             self.isDenied = false
             refreshStatus()
         } catch {
@@ -116,6 +116,6 @@ public final class AutoStartManager: ObservableObject {
     }
 
     public func openSystemSettings() {
-        service.openSystemSettingsLoginItems()
+        performOpenSettings()
     }
 }
