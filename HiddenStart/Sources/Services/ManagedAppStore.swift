@@ -5,6 +5,10 @@ import Combine
 public final class ManagedAppStore: ObservableObject, ManagedAppStoring {
     @Published public private(set) var apps: [ManagedApp] = []
 
+    public var appsPublisher: AnyPublisher<[ManagedApp], Never> {
+        $apps.eraseToAnyPublisher()
+    }
+
     public let fileURL: URL
     private let fileManager: FileManager
     private let userDefaults: UserDefaults
@@ -137,7 +141,7 @@ public final class ManagedAppStore: ObservableObject, ManagedAppStoring {
         missingIds.contains(appId)
     }
 
-    public func refreshAppHealth() {
+    func refreshAppHealth() {
         var didMutate = false
         for i in 0..<apps.count {
             if evaluateAndHeal(&apps[i]) {

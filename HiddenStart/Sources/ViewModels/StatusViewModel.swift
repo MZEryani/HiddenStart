@@ -55,13 +55,17 @@ public final class StatusViewModel: ObservableObject {
         self.startupRunCoordinator = resolvedCoordinator
         self.networkStatus = Self.deriveNetworkStatus(from: resolvedCoordinator.state)
 
-
         if managedAppStore == nil {
             try? resolvedStore.load()
         }
 
-        resolvedStore.refreshAppHealth()
-        self.managedApps = resolvedStore.apps
+        // Single subscription — managedApps stays in sync with the store automatically.
+        // @Published fires synchronously on @MainActor, so managedApps is seeded before init returns.
+        resolvedStore.appsPublisher
+            .sink { [weak self] apps in
+                self?.managedApps = apps
+            }
+            .store(in: &cancellables)
 
         resolvedCoordinator.statePublisher
             .receive(on: RunLoop.main)
@@ -127,8 +131,6 @@ public final class StatusViewModel: ObservableObject {
 
 
     public func startStartupRun() {
-        managedAppStore.refreshAppHealth()
-        managedApps = managedAppStore.apps
         let appsToLaunch = managedApps.filter { !managedAppStore.isMissing(appId: $0.id) }
         startupRunCoordinator.startStartupRun(for: appsToLaunch)
     }
@@ -173,7 +175,6 @@ public final class StatusViewModel: ObservableObject {
 
         do {
             let newApp = try managedAppStore.addApp(at: url)
-            managedApps = managedAppStore.apps
             if newApp.isDiscord {
                 statusMessage = "Added Discord (Launch Hidden configured; custom arguments empty)"
             } else {
@@ -188,7 +189,6 @@ public final class StatusViewModel: ObservableObject {
         startupRunCoordinator.cancelLaunch(for: id)
         do {
             try managedAppStore.remove(withId: id)
-            managedApps = managedAppStore.apps
             statusMessage = "Removed app"
         } catch {
             statusMessage = "Failed to remove app"
@@ -204,7 +204,6 @@ public final class StatusViewModel: ObservableObject {
         }
         do {
             try managedAppStore.update(app)
-            managedApps = managedAppStore.apps
         } catch {
             statusMessage = "Failed to update app"
         }
@@ -213,7 +212,6 @@ public final class StatusViewModel: ObservableObject {
     public func updateApplication(_ app: ManagedApp) {
         do {
             try managedAppStore.update(app)
-            managedApps = managedAppStore.apps
             statusMessage = "Updated \(app.name)"
         } catch {
             statusMessage = "Failed to update \(app.name)"
@@ -221,9 +219,6 @@ public final class StatusViewModel: ObservableObject {
     }
 
     public func testLaunch(app: ManagedApp) async {
-        managedAppStore.refreshAppHealth()
-        managedApps = managedAppStore.apps
-
         if managedAppStore.isMissing(appId: app.id) {
             statusMessage = "Launch failed: Application not found"
             return
