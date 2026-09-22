@@ -1,0 +1,384 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Architecture review — HiddenStart</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script type="module">
+      import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";
+      mermaid.initialize({ startOnLoad: true, theme: "neutral", securityLevel: "loose" });
+    </script>
+    <style>
+      .deep { background: linear-gradient(135deg, #0f172a, #1e293b); }
+      .badge-strong { background: #d1fae5; color: #065f46; }
+      .badge-worth { background: #fef3c7; color: #92400e; }
+      .badge-spec { background: #f1f5f9; color: #475569; }
+      .badge-done { background: #dcfce7; color: #14532d; border: 1.5px solid #16a34a; }
+      .badge-additional { background: #ede9fe; color: #4c1d95; }
+    </style>
+  </head>
+  <body class="bg-stone-50 text-slate-900 font-sans">
+    <main class="max-w-5xl mx-auto px-6 py-12 space-y-12">
+
+      <!-- ── HEADER ── -->
+      <header class="border-b border-slate-200 pb-8">
+        <p class="text-xs uppercase tracking-widest text-slate-400 mb-1">Architecture Review</p>
+        <h1 class="text-3xl font-serif font-semibold text-slate-900 mb-1">HiddenStart</h1>
+        <p class="text-slate-500 text-sm">21 Sep 2026 · updated 22 Sep 2026</p>
+
+        <div class="mt-4 rounded-lg border border-slate-200 bg-white p-4 text-sm text-slate-600">
+          <p class="font-semibold text-slate-800 mb-1">About this document</p>
+          <p>Produced by the <code>improve-codebase-architecture</code> skill. Five primary candidates were identified from hot-spot analysis (commits #11–#14). A research sub-agent performed a full independent read of every source and test file; its additional findings are incorporated in the <a href="#additional" class="text-emerald-700 underline">Additional Findings</a> section below. Candidate 1 has been implemented and closed.</p>
+        </div>
+
+        <div class="mt-6 flex flex-wrap gap-6 text-xs text-slate-500">
+          <span class="flex items-center gap-2"><span class="px-2 py-0.5 rounded text-xs font-semibold badge-done">✓ Done</span> Implemented &amp; closed</span>
+          <span class="flex items-center gap-2"><span class="px-2 py-0.5 rounded text-xs font-semibold badge-strong">Strong</span> High confidence, clear ROI</span>
+          <span class="flex items-center gap-2"><span class="px-2 py-0.5 rounded text-xs font-semibold badge-worth">Worth exploring</span> Solid, lower blast radius</span>
+          <span class="flex items-center gap-2"><span class="px-2 py-0.5 rounded text-xs font-semibold badge-spec">Speculative</span> Small gain now, pays off later</span>
+          <span class="flex items-center gap-2"><span class="px-2 py-0.5 rounded text-xs font-semibold badge-additional">Sub-agent finding</span> From independent full read</span>
+        </div>
+      </header>
+
+      <!-- ── PRIMARY CANDIDATES ── -->
+      <section id="candidates" class="space-y-14">
+
+        <!-- ── CANDIDATE 1 (DONE) ── -->
+        <article id="c1">
+          <div class="flex items-start justify-between mb-3">
+            <h2 class="text-xl font-serif font-semibold text-slate-900">1. Deepen the StatusViewModel: collapse mediation into the store</h2>
+            <div class="flex gap-2 shrink-0 ml-4">
+              <span class="px-2 py-1 rounded text-xs font-semibold badge-done">✓ Done</span>
+              <span class="px-2 py-1 rounded text-xs font-semibold badge-strong">Strong</span>
+            </div>
+          </div>
+
+          <!-- Completion banner -->
+          <div class="rounded-lg border border-emerald-300 bg-emerald-50 px-5 py-4 mb-6">
+            <div class="flex items-start gap-3">
+              <div class="text-emerald-600 text-xl mt-0.5">✓</div>
+              <div>
+                <p class="font-semibold text-emerald-900 text-sm">Implemented — commit <code class="font-mono">1a0b1c9</code> · 22 Sep 2026 · <a href="https://github.com/MZEryani/HiddenStart/issues/15" class="underline">Issue #15</a></p>
+                <ul class="text-emerald-800 text-sm mt-2 space-y-0.5 list-disc pl-4">
+                  <li><code>appsPublisher: AnyPublisher&lt;[ManagedApp], Never&gt;</code> added to <code>ManagedAppStoring</code></li>
+                  <li><code>refreshAppHealth()</code> removed from the protocol seam; demoted to <code>internal</code> on <code>ManagedAppStore</code></li>
+                  <li>Six manual <code>managedApps = managedAppStore.apps</code> sync sites replaced by one <code>appsPublisher</code> subscription in <code>StatusViewModel.init</code></li>
+                  <li><code>MockManagedAppStore</code> moved from <code>StatusViewModelTests.swift</code> to <code>Mocks/MockManagedAppStore.swift</code></li>
+                </ul>
+              </div>
+            </div>
+          </div>
+
+          <p class="font-mono text-sm text-slate-500 mb-5">
+            StatusViewModel.swift &nbsp;·&nbsp; ManagedAppStoring.swift &nbsp;·&nbsp; ManagedAppStore.swift
+          </p>
+
+          <div class="grid grid-cols-2 gap-6 mb-6">
+            <div class="rounded-lg border border-slate-200 bg-white p-4 opacity-60">
+              <p class="text-xs uppercase tracking-wider text-slate-400 font-semibold mb-3">Before — shallow mediation (removed)</p>
+              <div class="pre mermaid text-sm">
+flowchart TD
+  SVM["StatusViewModel\n(255 lines)"]
+  SVM -->|"refreshAppHealth()"| Store["ManagedAppStore"]
+  SVM -->|"apps = store.apps\n(6 call sites)"| Store
+  SVM -->|"isMissing(appId:)\n(2 call sites)"| Store
+  classDef shallow fill:#f1f5f9,stroke:#cbd5e1,stroke-width:1.5px;
+  class SVM shallow
+  class Store shallow
+              </div>
+            </div>
+            <div class="rounded-lg border border-emerald-200 bg-white p-4">
+              <p class="text-xs uppercase tracking-wider text-emerald-600 font-semibold mb-3">After — single subscription (shipped)</p>
+              <div class="pre mermaid text-sm">
+flowchart LR
+  Store["ManagedAppStore\n(deep)\nappsPublisher"]
+  SVM["StatusViewModel\n(subscriber)"]
+  Store -->|"appsPublisher\n(1 subscription)"| SVM
+  classDef deep fill:#0f172a,stroke:#334155,color:#e2e8f0,stroke-width:2px;
+  classDef thin fill:#f0fdf4,stroke:#16a34a,stroke-width:1.5px;
+  class Store deep
+  class SVM thin
+              </div>
+            </div>
+          </div>
+        </article>
+
+        <hr class="border-slate-200"/>
+
+        <!-- ── CANDIDATE 2 ── -->
+        <article id="c2">
+          <div class="flex items-start justify-between mb-3">
+            <h2 class="text-xl font-serif font-semibold text-slate-900">2. Collapse the auto-start seam: one adapter is hypothetical</h2>
+            <div class="flex gap-2 shrink-0 ml-4">
+              <span class="px-2 py-1 rounded text-xs font-semibold badge-worth">Worth exploring</span>
+            </div>
+          </div>
+          <p class="font-mono text-sm text-slate-500 mb-5">AutoStartManager.swift &nbsp;·&nbsp; AutoStartServiceRepresentable protocol</p>
+
+          <div class="grid grid-cols-2 gap-6 mb-6">
+            <div class="rounded-lg border border-slate-200 bg-white p-4">
+              <p class="text-xs uppercase tracking-wider text-slate-400 font-semibold mb-3">Before — extra adapter layer</p>
+              <div class="space-y-1">
+                <div class="h-10 border-l-4 border-amber-400 bg-amber-50 flex items-center px-3 text-xs text-amber-800 font-semibold uppercase tracking-wider">StatusViewModel</div>
+                <div class="h-10 border-l-4 border-slate-400 bg-slate-50 flex items-center px-3 text-xs text-slate-700 font-semibold uppercase tracking-wider">AutoStartManager</div>
+                <div class="h-8 border-l-4 border-slate-300 bg-slate-100 flex items-center px-3 text-xs text-slate-500 uppercase tracking-wider">AutoStartServiceRepresentable (protocol)</div>
+                <div class="h-8 border-l-4 border-blue-300 bg-blue-50 flex items-center px-3 text-xs text-blue-700 uppercase tracking-wider">SystemAutoStartService → SMAppService</div>
+                <p class="text-xs text-slate-400 mt-2 italic pl-2">One real adapter. MockAutoStartService exists only for tests — a hypothetical seam.</p>
+              </div>
+            </div>
+            <div class="rounded-lg border border-slate-200 bg-white p-4">
+              <p class="text-xs uppercase tracking-wider text-slate-400 font-semibold mb-3">After — seam at the right level</p>
+              <div class="space-y-1">
+                <div class="h-10 border-l-4 border-amber-400 bg-amber-50 flex items-center px-3 text-xs text-amber-800 font-semibold uppercase tracking-wider">StatusViewModel</div>
+                <div class="h-14 border-l-4 border-slate-900 flex items-center px-3 text-xs font-semibold uppercase tracking-wider rounded-r" style="background:linear-gradient(135deg,#1e293b,#0f172a);color:#e2e8f0;">AutoStartManager (deep) → SMAppService direct</div>
+                <p class="text-xs text-slate-400 mt-2 italic pl-2">Delete <code>AutoStartServiceRepresentable</code> + <code>SystemAutoStartService</code>. Restore only when a second real adapter appears.</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-3 gap-4 text-sm">
+            <div class="bg-red-50 border border-red-100 rounded-lg p-4">
+              <p class="font-semibold text-red-800 mb-1">Problem</p>
+              <p class="text-red-700 text-sm"><code>AutoStartServiceRepresentable</code> has exactly one real adapter. By the one-adapter rule this is a hypothetical seam — adds interface width without real leverage.</p>
+            </div>
+            <div class="bg-emerald-50 border border-emerald-100 rounded-lg p-4">
+              <p class="font-semibold text-emerald-800 mb-1">Solution</p>
+              <p class="text-emerald-700 text-sm">Delete the protocol and wrapper class. <code>AutoStartManager</code> holds <code>SMAppService</code> directly. Inject closure-based test doubles per operation.</p>
+            </div>
+            <div class="bg-slate-50 border border-slate-200 rounded-lg p-4">
+              <p class="font-semibold text-slate-700 mb-1">Wins</p>
+              <ul class="text-slate-600 text-sm space-y-1 list-disc pl-4">
+                <li>delete 2 shallow modules</li>
+                <li>interface shrinks; depth stays</li>
+                <li>no seam to misread as a variation point</li>
+              </ul>
+            </div>
+          </div>
+        </article>
+
+        <hr class="border-slate-200"/>
+
+        <!-- ── CANDIDATE 3 ── -->
+        <article id="c3">
+          <div class="flex items-start justify-between mb-3">
+            <h2 class="text-xl font-serif font-semibold text-slate-900">3. Extract the status-message derivation into a StatusPresenter</h2>
+            <div class="flex gap-2 shrink-0 ml-4">
+              <span class="px-2 py-1 rounded text-xs font-semibold badge-worth">Worth exploring</span>
+            </div>
+          </div>
+          <p class="font-mono text-sm text-slate-500 mb-5">StatusViewModel.swift (lines 83–121) &nbsp;·&nbsp; StartupRunCoordinating.swift (StartupRunState)</p>
+
+          <div class="grid grid-cols-2 gap-6 mb-6">
+            <div class="rounded-lg border border-slate-200 bg-white p-4">
+              <p class="text-xs uppercase tracking-wider text-slate-400 font-semibold mb-3">Before — two statics + inline transition guard</p>
+              <div class="space-y-1 text-xs font-mono text-slate-600 bg-slate-50 rounded p-3 border border-slate-200">
+                <div class="font-semibold text-slate-800">sink { state in</div>
+                <div class="pl-4 text-orange-700">self.remainingDelays = state.remainingDelays</div>
+                <div class="pl-4 text-orange-700">self.networkStatus = deriveNetworkStatus(from:state)</div>
+                <div class="pl-4 text-red-700">if state.phase != .idle || self.previousPhase != nil</div>
+                <div class="pl-8 text-red-700">|| self.statusMessage == "Ready" { ← magic string</div>
+                <div class="pl-8 text-red-700">self.statusMessage = derivedMessage</div>
+                <div class="pl-4 text-red-700">}</div>
+                <div class="pl-4 text-orange-700">self.previousPhase = state.phase</div>
+                <div class="font-semibold text-slate-800">}</div>
+              </div>
+            </div>
+            <div class="rounded-lg border border-slate-200 bg-white p-4">
+              <p class="text-xs uppercase tracking-wider text-slate-400 font-semibold mb-3">After — pure StatusPresenter value type</p>
+              <div class="space-y-1 text-xs font-mono text-slate-600 bg-slate-50 rounded p-3 border border-slate-200">
+                <div class="font-semibold text-slate-800">sink { state in</div>
+                <div class="pl-4 text-emerald-700">let display = presenter.derive(state, managedApps)</div>
+                <div class="pl-4 text-emerald-700">self.statusMessage = display.message</div>
+                <div class="pl-4 text-emerald-700">self.networkStatus = display.networkStatus</div>
+                <div class="pl-4 text-emerald-700">self.remainingDelays = display.remainingDelays</div>
+                <div class="font-semibold text-slate-800">}</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-3 gap-4 text-sm">
+            <div class="bg-red-50 border border-red-100 rounded-lg p-4">
+              <p class="font-semibold text-red-800 mb-1">Problem</p>
+              <p class="text-red-700 text-sm">The <code>previousPhase</code> transition guard is inlined in the <code>sink</code> closure with a silent dependency on the magic string <code>"Ready"</code> matching the init default. Renaming the default silently breaks the guard.</p>
+            </div>
+            <div class="bg-emerald-50 border border-emerald-100 rounded-lg p-4">
+              <p class="font-semibold text-emerald-800 mb-1">Solution</p>
+              <p class="text-emerald-700 text-sm">Extract a <code>StatusPresenter</code> value type: pure function <code>(StartupRunState, [ManagedApp], Phase?) → StatusDisplay</code>. All transition logic moves inside it. Tests hit it directly — no view-model setup needed.</p>
+            </div>
+            <div class="bg-slate-50 border border-slate-200 rounded-lg p-4">
+              <p class="font-semibold text-slate-700 mb-1">Wins</p>
+              <ul class="text-slate-600 text-sm space-y-1 list-disc pl-4">
+                <li>magic string dependency eliminated</li>
+                <li>locality: all status-text logic in one place</li>
+                <li>tests hit StatusPresenter directly</li>
+                <li>inline previousPhase mutation disappears from subscriber</li>
+              </ul>
+            </div>
+          </div>
+        </article>
+
+        <hr class="border-slate-200"/>
+
+        <!-- ── CANDIDATE 4 ── -->
+        <article id="c4">
+          <div class="flex items-start justify-between mb-3">
+            <h2 class="text-xl font-serif font-semibold text-slate-900">4. Deepen AppPreset: hide preset resolution behind the store seam</h2>
+            <div class="flex gap-2 shrink-0 ml-4">
+              <span class="px-2 py-1 rounded text-xs font-semibold badge-spec">Speculative</span>
+            </div>
+          </div>
+          <p class="font-mono text-sm text-slate-500 mb-5">AppPreset.swift &nbsp;·&nbsp; ManagedApp.swift (<code>isDiscord</code>) &nbsp;·&nbsp; ManagedAppStore.swift &nbsp;·&nbsp; AppInspectorSheet.swift</p>
+
+          <div class="rounded-lg border border-slate-200 bg-white p-4 mb-4">
+            <p class="text-xs uppercase tracking-wider text-slate-400 font-semibold mb-2">Blast radius</p>
+            <p class="text-sm text-slate-600">The sub-agent confirmed that <code>isDiscord</code> is referenced in five places: <code>ManagedApp</code> (computed var), <code>ManagedAppStore.load()</code> (migration), <code>StatusViewModel.addApplication()</code> (status message), <code>AppInspectorSheet</code> (UI label), and <code>AppPreset.knownPresets</code> (truth source). The parallel tracks are an active maintenance hazard: a new Discord bundle ID only needs adding in one place (<code>AppPreset.knownPresets</code>) but currently must also be updated in <code>ManagedApp.isDiscord</code>.</p>
+          </div>
+
+          <div class="grid grid-cols-3 gap-4 text-sm">
+            <div class="bg-red-50 border border-red-100 rounded-lg p-4">
+              <p class="font-semibold text-red-800 mb-1">Problem</p>
+              <p class="text-red-700 text-sm"><code>ManagedApp.isDiscord</code> duplicates identity logic that <code>AppPreset.knownPresets</code> already owns. Three independent callers branch on it. Adding a third Discord bundle ID would require editing both <code>ManagedApp</code> and <code>AppPreset</code>.</p>
+            </div>
+            <div class="bg-emerald-50 border border-emerald-100 rounded-lg p-4">
+              <p class="font-semibold text-emerald-800 mb-1">Solution</p>
+              <p class="text-emerald-700 text-sm">Delete <code>isDiscord</code> from <code>ManagedApp</code>. Let <code>addApp(at:)</code> return <code>(app: ManagedApp, note: String?)</code>. <code>AppPreset</code> produces the note; callers display it without knowing why.</p>
+            </div>
+            <div class="bg-slate-50 border border-slate-200 rounded-lg p-4">
+              <p class="font-semibold text-slate-700 mb-1">Wins</p>
+              <ul class="text-slate-600 text-sm space-y-1 list-disc pl-4">
+                <li>single source of preset identity</li>
+                <li>new App Presets need no changes outside AppPreset</li>
+                <li>ManagedApp becomes pure data</li>
+              </ul>
+            </div>
+          </div>
+        </article>
+
+        <hr class="border-slate-200"/>
+
+        <!-- ── CANDIDATE 5 ── -->
+        <article id="c5">
+          <div class="flex items-start justify-between mb-3">
+            <h2 class="text-xl font-serif font-semibold text-slate-900">5. WorkspaceManaging: two adapters, real seam — keep it</h2>
+            <div class="flex gap-2 shrink-0 ml-4">
+              <span class="px-2 py-1 rounded text-xs font-semibold badge-strong">Strong (keep)</span>
+            </div>
+          </div>
+          <p class="font-mono text-sm text-slate-500 mb-4">WorkspaceManaging.swift &nbsp;·&nbsp; MockWorkspaceManager.swift</p>
+
+          <div class="rounded-lg border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800">
+            <strong>This seam earns its place.</strong> Two real adapters (<code>SystemWorkspaceManager</code> in prod, <code>MockWorkspaceManager</code> in tests), three independent call sites (<code>ManagedAppStore</code>, <code>StartupRunCoordinator</code>, <code>WindowSuppressionEngine</code>), narrow interface (4 methods). The sub-agent confirmed the protocol and its implementation are co-located in the same file — good locality. Only minor long-term note: <code>icon(forFile:)</code> returns <code>NSImage</code>, leaking an AppKit type across the seam. Not a current problem.
+          </div>
+        </article>
+
+      </section>
+
+      <!-- ── ADDITIONAL FINDINGS (sub-agent) ── -->
+      <section id="additional" class="mt-14">
+        <div class="flex items-center gap-3 mb-6">
+          <h2 class="text-2xl font-serif font-semibold text-slate-900">Additional findings — full sub-agent read</h2>
+          <span class="px-2 py-1 rounded text-xs font-semibold badge-additional">Sub-agent finding</span>
+        </div>
+        <p class="text-slate-500 text-sm mb-8">A research sub-agent independently read every Swift source and test file. These findings were not captured in the primary candidates.</p>
+
+        <div class="grid grid-cols-2 gap-6">
+
+          <!-- F1 -->
+          <div class="rounded-lg border border-slate-200 bg-white p-5">
+            <div class="flex justify-between mb-2">
+              <h3 class="font-semibold text-slate-800 text-sm">F1 — PopoverPresenting casts through its own abstraction</h3>
+              <span class="px-2 py-0.5 rounded text-xs font-semibold badge-worth shrink-0 ml-2">Worth exploring</span>
+            </div>
+            <p class="text-xs text-slate-500 font-mono mb-3">StatusItemController.swift L37–L42</p>
+            <p class="text-slate-600 text-sm">Production code downcasts <code>PopoverPresenting</code> back to <code>NSPopover</code> to set the content view controller. If a mock is passed, the content VC is silently never set. The abstraction is one-directional: only tests benefit; production always requires the concrete class. <strong>Fix:</strong> add <code>func setContentViewController(_ vc: NSViewController)</code> to <code>PopoverPresenting</code>, or acknowledge that the protocol shouldn't abstract NSPopover at this level and replace it with a simpler closure-based test double.</p>
+          </div>
+
+          <!-- F2 -->
+          <div class="rounded-lg border border-slate-200 bg-white p-5">
+            <div class="flex justify-between mb-2">
+              <h3 class="font-semibold text-slate-800 text-sm">F2 — networkStatus is a stringly-typed contract</h3>
+              <span class="px-2 py-0.5 rounded text-xs font-semibold badge-worth shrink-0 ml-2">Worth exploring</span>
+            </div>
+            <p class="text-xs text-slate-500 font-mono mb-3">PopoverContentView.swift L123–L132 · StatusViewModel.swift</p>
+            <p class="text-slate-600 text-sm"><code>PopoverContentView.networkStatusColor</code> switches on the exact string values published by <code>StatusViewModel.networkStatus</code>. Changing <code>"Network connected"</code> to <code>"Connected"</code> silently breaks the colour logic with no compilation error. <strong>Fix:</strong> publish a <code>NetworkStatusLevel</code> enum (<code>.connected</code>, <code>.waiting</code>, <code>.skippedOffline</code>) alongside or instead of the string. The View drives colour from the enum; the string is display-only.</p>
+          </div>
+
+          <!-- F3 -->
+          <div class="rounded-lg border border-slate-200 bg-white p-5">
+            <div class="flex justify-between mb-2">
+              <h3 class="font-semibold text-slate-800 text-sm">F3 — launchResolvedApp silently swallows errors</h3>
+              <span class="px-2 py-0.5 rounded text-xs font-semibold badge-strong shrink-0 ml-2">Strong</span>
+            </div>
+            <p class="text-xs text-slate-500 font-mono mb-3">StartupRunCoordinator.swift L404</p>
+            <p class="text-slate-600 text-sm"><code>try? await self.windowSuppressor.launch(app: app)</code> — errors during a Startup Run launch are discarded. <code>launchImmediately</code> (the test-launch path) correctly propagates. A workspace refusal, entitlement denial, or WindowSuppressionEngine failure becomes a silent no-op during boot with no user feedback. <strong>Fix:</strong> capture the error, update <code>StartupRunState</code> with a per-app failure enum, surface it in the managed apps list.</p>
+          </div>
+
+          <!-- F4 -->
+          <div class="rounded-lg border border-slate-200 bg-white p-5">
+            <div class="flex justify-between mb-2">
+              <h3 class="font-semibold text-slate-800 text-sm">F4 — isAppAlreadyRunning is untested as a unit</h3>
+              <span class="px-2 py-0.5 rounded text-xs font-semibold badge-worth shrink-0 ml-2">Worth exploring</span>
+            </div>
+            <p class="text-xs text-slate-500 font-mono mb-3">StartupRunCoordinator.swift L376–L397</p>
+            <p class="text-slate-600 text-sm">Three matching heuristics: bundle identifier (case-insensitive) → bundle URL → last path component. The third is aggressive: any app whose last path component is <code>Steam.app</code> would be blocked. The bundle-ID heuristic is exercised by the integration test <code>skipsAlreadyRunningApps</code>; the URL and name-match paths are never directly tested. <strong>Fix:</strong> extract <code>isAppAlreadyRunning</code> as a pure static function taking a <code>[RunningAppRepresentable]</code> parameter; add dedicated unit tests for each heuristic.</p>
+          </div>
+
+          <!-- F5 -->
+          <div class="rounded-lg border border-slate-200 bg-white p-5">
+            <div class="flex justify-between mb-2">
+              <h3 class="font-semibold text-slate-800 text-sm">F5 — No composition root: wiring is duplicated across three inits</h3>
+              <span class="px-2 py-0.5 rounded text-xs font-semibold badge-spec shrink-0 ml-2">Speculative</span>
+            </div>
+            <p class="text-xs text-slate-500 font-mono mb-3">StatusViewModel.init · StartupRunCoordinator.init · StatusItemController.init</p>
+            <p class="text-slate-600 text-sm">Each init has a "create if nil" fallback pattern. The dependency graph is rebuilt implicitly from three different sites. <code>StatusViewModel</code> acts as an accidental composition root for its children, which is subtle. If you want a single shared <code>WorkspaceManaging</code> instance you must know to inject it explicitly, or accept two <code>SystemWorkspaceManager</code> instances. <strong>Fix:</strong> explicit <code>AppDelegate</code> composition root that constructs the full graph and injects concrete instances. Low urgency while the app is single-window.</p>
+          </div>
+
+          <!-- F6 -->
+          <div class="rounded-lg border border-slate-200 bg-white p-5">
+            <div class="flex justify-between mb-2">
+              <h3 class="font-semibold text-slate-800 text-sm">F6 — addDirectlyForTesting leaks test infrastructure into production</h3>
+              <span class="px-2 py-0.5 rounded text-xs font-semibold badge-worth shrink-0 ml-2">Worth exploring</span>
+            </div>
+            <p class="text-xs text-slate-500 font-mono mb-3">ManagedAppStore.swift L114</p>
+            <p class="text-slate-600 text-sm"><code>addDirectlyForTesting</code> is <code>internal</code> and used in 5+ test files. Test infrastructure lives in the production type. <strong>Fix:</strong> replace with a dedicated init that accepts a pre-populated <code>[ManagedApp]</code> array, or factor the method into a test-only extension file inside the test module using <code>@testable import</code>.</p>
+          </div>
+
+          <!-- F7 -->
+          <div class="rounded-lg border border-slate-200 bg-white p-5">
+            <div class="flex justify-between mb-2">
+              <h3 class="font-semibold text-slate-800 text-sm">F7 — AppDelegate reaches two levels deep to kick off launch</h3>
+              <span class="px-2 py-0.5 rounded text-xs font-semibold badge-spec shrink-0 ml-2">Speculative</span>
+            </div>
+            <p class="text-xs text-slate-500 font-mono mb-3">AppDelegate.swift L12</p>
+            <p class="text-slate-600 text-sm"><code>statusItemController?.viewModel.startStartupRun()</code> — <code>AppDelegate</code> crosses two ownership levels to call a method on a grandchild. This is a mild seam violation: AppDelegate knows the shape of the view model. <strong>Fix:</strong> add a <code>start()</code> method to <code>StatusItemController</code> that internally calls <code>viewModel.startStartupRun()</code>. AppDelegate becomes unaware of ViewModel.</p>
+          </div>
+
+          <!-- F8 -->
+          <div class="rounded-lg border border-slate-200 bg-white p-5">
+            <div class="flex justify-between mb-2">
+              <h3 class="font-semibold text-slate-800 text-sm">F8 — SuppressionEpisodeBudget mutation is a value-type footgun</h3>
+              <span class="px-2 py-0.5 rounded text-xs font-semibold badge-spec shrink-0 ml-2">Speculative</span>
+            </div>
+            <p class="text-xs text-slate-500 font-mono mb-3">WindowSuppressionEngine.swift L209–L226</p>
+            <p class="text-slate-600 text-sm"><code>SuppressionEpisodeBudget</code> is a value type stored in a class-owned dictionary. Mutating it requires the caller to write back: <code>entriesByAppId[appId] = entry</code>. If that line is ever omitted, the episode is silently discarded. Currently correct. <strong>Mitigation:</strong> make <code>GuardEntry</code> a class (reference type) so mutations propagate without the write-back, or add a comment flagging the invariant.</p>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- ── TOP RECOMMENDATION ── -->
+      <section id="top-recommendation" class="mt-14">
+        <div class="rounded-xl border-2 border-slate-900 overflow-hidden">
+          <div class="deep px-6 py-4">
+            <p class="text-xs uppercase tracking-widest text-slate-400 mb-1">Next recommendation</p>
+            <h2 class="text-xl font-serif font-semibold text-white">F3 — Surface launch errors from launchResolvedApp</h2>
+          </div>
+          <div class="bg-white px-6 py-5 text-sm text-slate-700">
+            <p>Candidate 1 is done. The highest-impact remaining item is <strong>F3</strong>: <code>launchResolvedApp</code> silently swallows errors during a Startup Run. Real launch failures produce no user feedback and are invisible in any log. The fix adds an error state to <code>StartupRunState</code> and surfaces per-app failure in the UI — a narrow vertical slice that cuts through coordinator, protocol, and view. <a href="#additional" class="text-emerald-700 underline font-medium">→ See F3</a></p>
+          </div>
+        </div>
+      </section>
+
+    </main>
+  </body>
+</html>
