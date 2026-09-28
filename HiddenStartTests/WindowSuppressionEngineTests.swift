@@ -163,8 +163,13 @@ struct WindowSuppressionEngineTests {
 
         let app = ManagedApp(name: "Faulty", bundlePath: "/Applications/Faulty.app", launchHidden: true)
 
-        await #expect(throws: TestLaunchError.self) {
+        do {
             try await engine.launch(app: app)
+            Issue.record("Expected TestLaunchError was not thrown")
+        } catch is TestLaunchError {
+            // Expected error caught
+        } catch {
+            Issue.record("Unexpected error: \(error)")
         }
 
         #expect(!engine.isGuarding)
