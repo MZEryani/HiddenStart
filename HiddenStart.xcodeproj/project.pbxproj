@@ -7,20 +7,26 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		0022258B80A41BF0539B33F8 /* ManagedAppStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1F5D88623D52C1B6BA752C87 /* ManagedAppStoreTests.swift */; };
+		00D24666F7BF4604A92CD241 /* StartupRunCoordinating.swift in Sources */ = {isa = PBXBuildFile; fileRef = B09E73DCAB96B1175C7A7B5C /* StartupRunCoordinating.swift */; };
 		03B40C37C3B675988E9B1CD5 /* WindowSuppressionEngineTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C6122D634691DD75BBF2B23E /* WindowSuppressionEngineTests.swift */; };
+		0916B5417B5D966244042BD7 /* StartupRunCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8DA9C342C4CB5C791FC1067F /* StartupRunCoordinator.swift */; };
+		12A4FE47986D347A2DC2742D /* MockStartupRunCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = F400BD040723C54964F8AD84 /* MockStartupRunCoordinator.swift */; };
 		1E46846CDBEA5EBF92FA0D94 /* WindowSuppressionEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 65B3BDC172581C2EBAB87943 /* WindowSuppressionEngine.swift */; };
 		218AEB452D320D66A6BC14DF /* MockNetworkMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = FCFD597B5F61FADF40004603 /* MockNetworkMonitor.swift */; };
-		23207F8F192DC4CA9D4DDDFC /* ManagedAppStoring.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6EDF013EDBAF2A1BEDBFC3C4 /* ManagedAppStoring.swift */; };
 		31279009B3F72712424A06F4 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A5A83C67A496BBF1BDE6F23 /* AppDelegate.swift */; };
+		3468EC9BA04B0B268F705C4F /* ManagedAppStoring.swift in Sources */ = {isa = PBXBuildFile; fileRef = E23945D6051F728E9F6F1397 /* ManagedAppStoring.swift */; };
 		3570CCD122D4F059D16C9121 /* PopoverContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 71BA33AAF8262AD76EBC7540 /* PopoverContentView.swift */; };
+		3C6D59485F08CBE416A2C080 /* MockManagedAppStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = D5F52FB495E9FC57EBD7A0CC /* MockManagedAppStore.swift */; };
 		3FE6A37AF48BAE127477A38F /* StatusViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9F68D8A04212B3D862BCDBE2 /* StatusViewModel.swift */; };
-
+		47AF3ABF3AFD4A14D7991A3D /* StatusPresenterTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = DC5CF4AE490AB7AD967522A5 /* StatusPresenterTests.swift */; };
 		47C3933872A94744E7D38A0E /* StatusItemController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50F39FB1970BA0BC860927BB /* StatusItemController.swift */; };
-		4C33E4D8ED877E576211B021 /* MockStartupRunCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5646CBFD069D96CF2F5E898C /* MockStartupRunCoordinator.swift */; };
 		5773C857A5E55F50D93A775C /* ApplicationPicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = C05E2C73945C277AEB507C08 /* ApplicationPicker.swift */; };
 		5E14437A7CED7694B6F3926B /* NetworkMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 202E0B2E1BDAAD69ED22EDDB /* NetworkMonitor.swift */; };
+		6B4E9B56FF38D5D11C0C8D67 /* AutoStartManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09BFE3A8A1690426B3091AB7 /* AutoStartManager.swift */; };
 		7D306DC739F016A6F1C8B3C7 /* AppPreset.swift in Sources */ = {isa = PBXBuildFile; fileRef = 874A9AF25E2673CD20F49F08 /* AppPreset.swift */; };
 		820F889F69B362BB7E79845E /* MockWindowSuppressor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 716F3B1C0FC5385AFE754FE1 /* MockWindowSuppressor.swift */; };
+		8505FAD0D84AF7F98A9A739C /* StatusPresenter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 088EE987F96A9F9431BA339F /* StatusPresenter.swift */; };
 		85C9079C476115F1F135EF4A /* MockRunningApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = EC2C92870F007A9CC5CA0AEF /* MockRunningApp.swift */; };
 		868EA6D12789CDBFD8B346A7 /* ManagedApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2EF8E61ED6A6A25F7CA85BD7 /* ManagedApp.swift */; };
 		8D6D6BF4B6477396FB0097B3 /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1368407B9BE630D8F47FBAA0 /* main.swift */; };
@@ -28,25 +34,18 @@
 		96020D6D2ED41BC2107E26B7 /* RunningAppRepresentable.swift in Sources */ = {isa = PBXBuildFile; fileRef = 18516F6F524DFC304443DBBD /* RunningAppRepresentable.swift */; };
 		9DC7F563F2390E1E58B94C01 /* StatusItemControllerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 01FB03F5450F4A10403D92BD /* StatusItemControllerTests.swift */; };
 		A7D3CA89DBFE25A8EA8856E0 /* WindowSuppressing.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1CDACF19F099C1C64357BEEA /* WindowSuppressing.swift */; };
-		AA3963EAD21AAE19BCA512FE /* StartupRunCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 461DFF78701E3893824F529C /* StartupRunCoordinator.swift */; };
 		AEBEA1C026E887B589DDCD2E /* StatusViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5694409F70B26B51C97EA918 /* StatusViewModelTests.swift */; };
-		BA7B9D974E602D314AE93885 /* StartupRunCoordinating.swift in Sources */ = {isa = PBXBuildFile; fileRef = 442B3E737707CE3532126612 /* StartupRunCoordinating.swift */; };
-		C12E687C11EB0155C16F2618 /* ManagedAppStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0E136AFDE4DD9E2EED715051 /* ManagedAppStore.swift */; };
+		B9515A790975271444B80D6E /* ManagedAppStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = C57B06E94C621A8F137A8861 /* ManagedAppStore.swift */; };
+		BEBA6CC3839A157594793C36 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 2B6FA0770A322D8831708DE7 /* Assets.xcassets */; };
 		C3B616F17CD3F9283AA00A37 /* NetworkMonitoring.swift in Sources */ = {isa = PBXBuildFile; fileRef = B3B8531BDC6F71EE3BBF93C3 /* NetworkMonitoring.swift */; };
 		C3F1B5116CCB2A0504D86CAF /* WorkspaceManaging.swift in Sources */ = {isa = PBXBuildFile; fileRef = F4193478EDCE6097EDFA0073 /* WorkspaceManaging.swift */; };
 		C8A52C32D7EEF1F01D44EA1D /* ManagedAppTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 658122A75EF833E7295C1CD3 /* ManagedAppTests.swift */; };
 		C912E9A7DFE1E5AC9271320F /* WorkspaceManagingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 07684E77E0152DA861A79118 /* WorkspaceManagingTests.swift */; };
-		CA6A8C5E5B63AC80552B8412 /* ManagedAppStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A242FB9A5C0F22F56B636115 /* ManagedAppStoreTests.swift */; };
+		CA91CDB17B6E4CB983BE7563 /* StartupRunCoordinatorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A108256C21B7E9537ADD931 /* StartupRunCoordinatorTests.swift */; };
 		CD47CD55C83DD3C64CA2CDE5 /* NetworkMonitorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9645DB28FCB47F1096EA7094 /* NetworkMonitorTests.swift */; };
-		D1580443A5521618217078F1 /* StartupRunCoordinatorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E726CE535CBDFFD9EB666592 /* StartupRunCoordinatorTests.swift */; };
+		D1BA8C4E4C2602D34E4D0357 /* AutoStartManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 59EE96B33DACC1278CE30171 /* AutoStartManagerTests.swift */; };
 		D88461F08798382E36244DAA /* ApplicationPickerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BDCCC5E483281D4332BB19F6 /* ApplicationPickerTests.swift */; };
 		FD677C15ADEE53A300FA7CE9 /* MockWorkspaceManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A9AC978E0D6290C4228A94E4 /* MockWorkspaceManager.swift */; };
-		B10000000000000000000003 /* AutoStartManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000003 /* AutoStartManager.swift */; };
-		B10000000000000000000006 /* AutoStartManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000006 /* AutoStartManagerTests.swift */; };
-		B10000000000000000000007 /* StatusPresenter.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000007 /* StatusPresenter.swift */; };
-		B10000000000000000000008 /* StatusPresenterTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000008 /* StatusPresenterTests.swift */; };
-		B10000000000000000000009 /* MockManagedAppStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000009 /* MockManagedAppStore.swift */; };
-
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -62,45 +61,45 @@
 /* Begin PBXFileReference section */
 		01FB03F5450F4A10403D92BD /* StatusItemControllerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatusItemControllerTests.swift; sourceTree = "<group>"; };
 		07684E77E0152DA861A79118 /* WorkspaceManagingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkspaceManagingTests.swift; sourceTree = "<group>"; };
-		0E136AFDE4DD9E2EED715051 /* ManagedAppStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ManagedAppStore.swift; sourceTree = "<group>"; };
+		088EE987F96A9F9431BA339F /* StatusPresenter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatusPresenter.swift; sourceTree = "<group>"; };
+		09BFE3A8A1690426B3091AB7 /* AutoStartManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AutoStartManager.swift; sourceTree = "<group>"; };
 		1368407B9BE630D8F47FBAA0 /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
 		18516F6F524DFC304443DBBD /* RunningAppRepresentable.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RunningAppRepresentable.swift; sourceTree = "<group>"; };
 		1CDACF19F099C1C64357BEEA /* WindowSuppressing.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WindowSuppressing.swift; sourceTree = "<group>"; };
+		1F5D88623D52C1B6BA752C87 /* ManagedAppStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ManagedAppStoreTests.swift; sourceTree = "<group>"; };
 		202E0B2E1BDAAD69ED22EDDB /* NetworkMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetworkMonitor.swift; sourceTree = "<group>"; };
+		2B6FA0770A322D8831708DE7 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		2EF8E61ED6A6A25F7CA85BD7 /* ManagedApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ManagedApp.swift; sourceTree = "<group>"; };
+		3A108256C21B7E9537ADD931 /* StartupRunCoordinatorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StartupRunCoordinatorTests.swift; sourceTree = "<group>"; };
 		3A5A83C67A496BBF1BDE6F23 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
-		442B3E737707CE3532126612 /* StartupRunCoordinating.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StartupRunCoordinating.swift; sourceTree = "<group>"; };
-		461DFF78701E3893824F529C /* StartupRunCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StartupRunCoordinator.swift; sourceTree = "<group>"; };
 		4987F22BE523E03FC5A47C96 /* HiddenStart.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = HiddenStart.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		50F39FB1970BA0BC860927BB /* StatusItemController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatusItemController.swift; sourceTree = "<group>"; };
-		5646CBFD069D96CF2F5E898C /* MockStartupRunCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockStartupRunCoordinator.swift; sourceTree = "<group>"; };
 		5694409F70B26B51C97EA918 /* StatusViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatusViewModelTests.swift; sourceTree = "<group>"; };
+		59EE96B33DACC1278CE30171 /* AutoStartManagerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AutoStartManagerTests.swift; sourceTree = "<group>"; };
 		5C430C549288EDFCE4985BE9 /* HiddenStartTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = HiddenStartTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		658122A75EF833E7295C1CD3 /* ManagedAppTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ManagedAppTests.swift; sourceTree = "<group>"; };
 		65B3BDC172581C2EBAB87943 /* WindowSuppressionEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WindowSuppressionEngine.swift; sourceTree = "<group>"; };
-		6EDF013EDBAF2A1BEDBFC3C4 /* ManagedAppStoring.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ManagedAppStoring.swift; sourceTree = "<group>"; };
 		716F3B1C0FC5385AFE754FE1 /* MockWindowSuppressor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockWindowSuppressor.swift; sourceTree = "<group>"; };
 		71BA33AAF8262AD76EBC7540 /* PopoverContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PopoverContentView.swift; sourceTree = "<group>"; };
 		874A9AF25E2673CD20F49F08 /* AppPreset.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppPreset.swift; sourceTree = "<group>"; };
+		8DA9C342C4CB5C791FC1067F /* StartupRunCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StartupRunCoordinator.swift; sourceTree = "<group>"; };
 		9645DB28FCB47F1096EA7094 /* NetworkMonitorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetworkMonitorTests.swift; sourceTree = "<group>"; };
 		9F68D8A04212B3D862BCDBE2 /* StatusViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatusViewModel.swift; sourceTree = "<group>"; };
-		A242FB9A5C0F22F56B636115 /* ManagedAppStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ManagedAppStoreTests.swift; sourceTree = "<group>"; };
 		A8A14888546F174BE8B6F723 /* AppInspectorSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppInspectorSheet.swift; sourceTree = "<group>"; };
 		A9AC978E0D6290C4228A94E4 /* MockWorkspaceManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockWorkspaceManager.swift; sourceTree = "<group>"; };
+		B09E73DCAB96B1175C7A7B5C /* StartupRunCoordinating.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StartupRunCoordinating.swift; sourceTree = "<group>"; };
 		B3B8531BDC6F71EE3BBF93C3 /* NetworkMonitoring.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetworkMonitoring.swift; sourceTree = "<group>"; };
 		BDCCC5E483281D4332BB19F6 /* ApplicationPickerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ApplicationPickerTests.swift; sourceTree = "<group>"; };
 		C05E2C73945C277AEB507C08 /* ApplicationPicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ApplicationPicker.swift; sourceTree = "<group>"; };
+		C57B06E94C621A8F137A8861 /* ManagedAppStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ManagedAppStore.swift; sourceTree = "<group>"; };
 		C6122D634691DD75BBF2B23E /* WindowSuppressionEngineTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WindowSuppressionEngineTests.swift; sourceTree = "<group>"; };
-		E726CE535CBDFFD9EB666592 /* StartupRunCoordinatorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StartupRunCoordinatorTests.swift; sourceTree = "<group>"; };
+		D5F52FB495E9FC57EBD7A0CC /* MockManagedAppStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockManagedAppStore.swift; sourceTree = "<group>"; };
+		DC5CF4AE490AB7AD967522A5 /* StatusPresenterTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatusPresenterTests.swift; sourceTree = "<group>"; };
+		E23945D6051F728E9F6F1397 /* ManagedAppStoring.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ManagedAppStoring.swift; sourceTree = "<group>"; };
 		EC2C92870F007A9CC5CA0AEF /* MockRunningApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockRunningApp.swift; sourceTree = "<group>"; };
+		F400BD040723C54964F8AD84 /* MockStartupRunCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockStartupRunCoordinator.swift; sourceTree = "<group>"; };
 		F4193478EDCE6097EDFA0073 /* WorkspaceManaging.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkspaceManaging.swift; sourceTree = "<group>"; };
 		FCFD597B5F61FADF40004603 /* MockNetworkMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockNetworkMonitor.swift; sourceTree = "<group>"; };
-		A10000000000000000000003 /* AutoStartManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AutoStartManager.swift; sourceTree = "<group>"; };
-		A10000000000000000000006 /* AutoStartManagerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AutoStartManagerTests.swift; sourceTree = "<group>"; };
-		A10000000000000000000007 /* StatusPresenter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatusPresenter.swift; sourceTree = "<group>"; };
-		A10000000000000000000008 /* StatusPresenterTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatusPresenterTests.swift; sourceTree = "<group>"; };
-		A10000000000000000000009 /* MockManagedAppStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockManagedAppStore.swift; sourceTree = "<group>"; };
-
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
@@ -123,6 +122,7 @@
 		16D88A42AEB9DD9EB00A7D77 = {
 			isa = PBXGroup;
 			children = (
+				B0FAA847FA22AB2DAA518B0D /* HiddenStart */,
 				EB96C7E392B3106D13A76152 /* HiddenStartTests */,
 				06876D6122A4FB68C2C7F2BE /* Sources */,
 				D14852CD305B207F37A9B29F /* Products */,
@@ -141,34 +141,41 @@
 		4E2D5CD28662D44097ECB897 /* Protocols */ = {
 			isa = PBXGroup;
 			children = (
-				442B3E737707CE3532126612 /* StartupRunCoordinating.swift */,
+				E23945D6051F728E9F6F1397 /* ManagedAppStoring.swift */,
 				B3B8531BDC6F71EE3BBF93C3 /* NetworkMonitoring.swift */,
 				18516F6F524DFC304443DBBD /* RunningAppRepresentable.swift */,
-				6EDF013EDBAF2A1BEDBFC3C4 /* ManagedAppStoring.swift */,
+				B09E73DCAB96B1175C7A7B5C /* StartupRunCoordinating.swift */,
 				1CDACF19F099C1C64357BEEA /* WindowSuppressing.swift */,
 				F4193478EDCE6097EDFA0073 /* WorkspaceManaging.swift */,
 			);
 			path = Protocols;
 			sourceTree = "<group>";
 		};
+		B0FAA847FA22AB2DAA518B0D /* HiddenStart */ = {
+			isa = PBXGroup;
+			children = (
+				2B6FA0770A322D8831708DE7 /* Assets.xcassets */,
+			);
+			path = HiddenStart;
+			sourceTree = "<group>";
+		};
 		B86CEB66724CB853DFD3C762 /* Mocks */ = {
 			isa = PBXGroup;
 			children = (
-				5646CBFD069D96CF2F5E898C /* MockStartupRunCoordinator.swift */,
+				D5F52FB495E9FC57EBD7A0CC /* MockManagedAppStore.swift */,
 				FCFD597B5F61FADF40004603 /* MockNetworkMonitor.swift */,
 				EC2C92870F007A9CC5CA0AEF /* MockRunningApp.swift */,
+				F400BD040723C54964F8AD84 /* MockStartupRunCoordinator.swift */,
 				716F3B1C0FC5385AFE754FE1 /* MockWindowSuppressor.swift */,
 				A9AC978E0D6290C4228A94E4 /* MockWorkspaceManager.swift */,
-				A10000000000000000000009 /* MockManagedAppStore.swift */,
 			);
-
 			path = Mocks;
 			sourceTree = "<group>";
 		};
 		C130A8D3851271FD5D3198AC /* ViewModels */ = {
 			isa = PBXGroup;
 			children = (
-				A10000000000000000000007 /* StatusPresenter.swift */,
+				088EE987F96A9F9431BA339F /* StatusPresenter.swift */,
 				9F68D8A04212B3D862BCDBE2 /* StatusViewModel.swift */,
 			);
 			path = ViewModels;
@@ -187,13 +194,13 @@
 			isa = PBXGroup;
 			children = (
 				BDCCC5E483281D4332BB19F6 /* ApplicationPickerTests.swift */,
-				A10000000000000000000006 /* AutoStartManagerTests.swift */,
-				A10000000000000000000008 /* StatusPresenterTests.swift */,
-				E726CE535CBDFFD9EB666592 /* StartupRunCoordinatorTests.swift */,
+				59EE96B33DACC1278CE30171 /* AutoStartManagerTests.swift */,
+				1F5D88623D52C1B6BA752C87 /* ManagedAppStoreTests.swift */,
 				658122A75EF833E7295C1CD3 /* ManagedAppTests.swift */,
 				9645DB28FCB47F1096EA7094 /* NetworkMonitorTests.swift */,
-				A242FB9A5C0F22F56B636115 /* ManagedAppStoreTests.swift */,
+				3A108256C21B7E9537ADD931 /* StartupRunCoordinatorTests.swift */,
 				01FB03F5450F4A10403D92BD /* StatusItemControllerTests.swift */,
+				DC5CF4AE490AB7AD967522A5 /* StatusPresenterTests.swift */,
 				5694409F70B26B51C97EA918 /* StatusViewModelTests.swift */,
 				C6122D634691DD75BBF2B23E /* WindowSuppressionEngineTests.swift */,
 				07684E77E0152DA861A79118 /* WorkspaceManagingTests.swift */,
@@ -215,10 +222,10 @@
 			isa = PBXGroup;
 			children = (
 				C05E2C73945C277AEB507C08 /* ApplicationPicker.swift */,
-				A10000000000000000000003 /* AutoStartManager.swift */,
-				461DFF78701E3893824F529C /* StartupRunCoordinator.swift */,
+				09BFE3A8A1690426B3091AB7 /* AutoStartManager.swift */,
+				C57B06E94C621A8F137A8861 /* ManagedAppStore.swift */,
 				202E0B2E1BDAAD69ED22EDDB /* NetworkMonitor.swift */,
-				0E136AFDE4DD9E2EED715051 /* ManagedAppStore.swift */,
+				8DA9C342C4CB5C791FC1067F /* StartupRunCoordinator.swift */,
 				65B3BDC172581C2EBAB87943 /* WindowSuppressionEngine.swift */,
 			);
 			path = Services;
@@ -232,6 +239,7 @@
 			buildConfigurationList = CDFB1526E8D25D4A90CDD8C5 /* Build configuration list for PBXNativeTarget "HiddenStart" */;
 			buildPhases = (
 				F92EDEFC12A407AE5493661F /* Sources */,
+				DF429ABE5348AB04AB4E7AC9 /* Resources */,
 			);
 			buildRules = (
 			);
@@ -299,29 +307,39 @@
 		};
 /* End PBXProject section */
 
+/* Begin PBXResourcesBuildPhase section */
+		DF429ABE5348AB04AB4E7AC9 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				BEBA6CC3839A157594793C36 /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
 /* Begin PBXSourcesBuildPhase section */
 		682748A3DEE3C06703615A6C /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
 				D88461F08798382E36244DAA /* ApplicationPickerTests.swift in Sources */,
-				D1580443A5521618217078F1 /* StartupRunCoordinatorTests.swift in Sources */,
+				D1BA8C4E4C2602D34E4D0357 /* AutoStartManagerTests.swift in Sources */,
+				0022258B80A41BF0539B33F8 /* ManagedAppStoreTests.swift in Sources */,
 				C8A52C32D7EEF1F01D44EA1D /* ManagedAppTests.swift in Sources */,
-				4C33E4D8ED877E576211B021 /* MockStartupRunCoordinator.swift in Sources */,
-
+				3C6D59485F08CBE416A2C080 /* MockManagedAppStore.swift in Sources */,
 				218AEB452D320D66A6BC14DF /* MockNetworkMonitor.swift in Sources */,
 				85C9079C476115F1F135EF4A /* MockRunningApp.swift in Sources */,
+				12A4FE47986D347A2DC2742D /* MockStartupRunCoordinator.swift in Sources */,
 				820F889F69B362BB7E79845E /* MockWindowSuppressor.swift in Sources */,
 				FD677C15ADEE53A300FA7CE9 /* MockWorkspaceManager.swift in Sources */,
 				CD47CD55C83DD3C64CA2CDE5 /* NetworkMonitorTests.swift in Sources */,
-				CA6A8C5E5B63AC80552B8412 /* ManagedAppStoreTests.swift in Sources */,
+				CA91CDB17B6E4CB983BE7563 /* StartupRunCoordinatorTests.swift in Sources */,
 				9DC7F563F2390E1E58B94C01 /* StatusItemControllerTests.swift in Sources */,
+				47AF3ABF3AFD4A14D7991A3D /* StatusPresenterTests.swift in Sources */,
 				AEBEA1C026E887B589DDCD2E /* StatusViewModelTests.swift in Sources */,
 				03B40C37C3B675988E9B1CD5 /* WindowSuppressionEngineTests.swift in Sources */,
 				C912E9A7DFE1E5AC9271320F /* WorkspaceManagingTests.swift in Sources */,
-				B10000000000000000000006 /* AutoStartManagerTests.swift in Sources */,
-				B10000000000000000000008 /* StatusPresenterTests.swift in Sources */,
-				B10000000000000000000009 /* MockManagedAppStore.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -329,23 +347,22 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				B10000000000000000000003 /* AutoStartManager.swift in Sources */,
-				B10000000000000000000007 /* StatusPresenter.swift in Sources */,
 				31279009B3F72712424A06F4 /* AppDelegate.swift in Sources */,
 				92876BFBDC62BEFA861E88B9 /* AppInspectorSheet.swift in Sources */,
 				7D306DC739F016A6F1C8B3C7 /* AppPreset.swift in Sources */,
 				5773C857A5E55F50D93A775C /* ApplicationPicker.swift in Sources */,
-				BA7B9D974E602D314AE93885 /* StartupRunCoordinating.swift in Sources */,
-
-				AA3963EAD21AAE19BCA512FE /* StartupRunCoordinator.swift in Sources */,
+				6B4E9B56FF38D5D11C0C8D67 /* AutoStartManager.swift in Sources */,
 				868EA6D12789CDBFD8B346A7 /* ManagedApp.swift in Sources */,
+				B9515A790975271444B80D6E /* ManagedAppStore.swift in Sources */,
+				3468EC9BA04B0B268F705C4F /* ManagedAppStoring.swift in Sources */,
 				5E14437A7CED7694B6F3926B /* NetworkMonitor.swift in Sources */,
 				C3B616F17CD3F9283AA00A37 /* NetworkMonitoring.swift in Sources */,
 				3570CCD122D4F059D16C9121 /* PopoverContentView.swift in Sources */,
 				96020D6D2ED41BC2107E26B7 /* RunningAppRepresentable.swift in Sources */,
-				C12E687C11EB0155C16F2618 /* ManagedAppStore.swift in Sources */,
-				23207F8F192DC4CA9D4DDDFC /* ManagedAppStoring.swift in Sources */,
+				00D24666F7BF4604A92CD241 /* StartupRunCoordinating.swift in Sources */,
+				0916B5417B5D966244042BD7 /* StartupRunCoordinator.swift in Sources */,
 				47C3933872A94744E7D38A0E /* StatusItemController.swift in Sources */,
+				8505FAD0D84AF7F98A9A739C /* StatusPresenter.swift in Sources */,
 				3FE6A37AF48BAE127477A38F /* StatusViewModel.swift in Sources */,
 				A7D3CA89DBFE25A8EA8856E0 /* WindowSuppressing.swift in Sources */,
 				1E46846CDBEA5EBF92FA0D94 /* WindowSuppressionEngine.swift in Sources */,
@@ -468,6 +485,7 @@
 		9630688B5121BBFB21CC5935 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ARCHS = arm64;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = HiddenStart/HiddenStart.entitlements;
 				COMBINE_HIDPI_IMAGES = YES;
@@ -484,6 +502,7 @@
 		D7D3E0DB0CD043BDB1C5AF35 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ARCHS = arm64;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = HiddenStart/HiddenStart.entitlements;
 				COMBINE_HIDPI_IMAGES = YES;

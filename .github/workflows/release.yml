@@ -1,0 +1,86 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version tag to release (e.g. 0.9.0)'
+        required: true
+        default: '0.9.0'
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    name: Build & Publish Release
+    runs-on: macos-14
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Python Dependencies
+        run: |
+          python3 -m pip install --upgrade pip
+          pip install Pillow
+
+      - name: Install XcodeGen
+        run: |
+          brew install xcodegen
+
+      - name: Generate Xcode Project
+        run: |
+          xcodegen generate
+
+      - name: Run Test Suite
+        run: |
+          ./scripts/test.sh
+
+      - name: Extract Version
+        id: get_version
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            VERSION="${{ github.event.inputs.version }}"
+          else
+            VERSION="${GITHUB_REF_NAME#v}"
+          fi
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+
+      - name: Build Release DMG
+        env:
+          APPLE_DEVELOPER_IDENTITY: ${{ secrets.APPLE_DEVELOPER_IDENTITY }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          ./scripts/build_dmg.sh "${{ steps.get_version.outputs.version }}"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/HiddenStart-${{ steps.get_version.outputs.version }}.dmg
+            dist/HiddenStart-${{ steps.get_version.outputs.version }}.dmg.sha256
+          name: HiddenStart v${{ steps.get_version.outputs.version }}
+          generate_release_notes: true
+          body: |
+            ### Installation
+            1. Download `HiddenStart-${{ steps.get_version.outputs.version }}.dmg`.
+            2. Double-click the DMG and drag **HiddenStart.app** into your **Applications** folder.
+            3. Launch HiddenStart from `/Applications`.
+            
+            > **macOS Gatekeeper Notice**:
+            > If macOS warns that the app cannot be opened because Apple cannot check it for malicious software (ad-hoc signed build):
+            > - Open **System Settings \u2192 Privacy & Security**.
+            > - Scroll down to the *Security* section and click **Open Anyway**.
+            > - Alternatively, run: `xattr -cr /Applications/HiddenStart.app` in Terminal.

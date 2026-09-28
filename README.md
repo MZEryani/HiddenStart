@@ -51,7 +51,25 @@ HiddenStart runs quietly in your menu bar, holding back selected applications un
 ## Requirements
 
 * macOS 13.0 (Ventura) or later
-* Apple Silicon or Intel 64-bit processor
+* Apple Silicon (M1/M2/M3/M4)
+
+---
+
+## Installation
+
+1. Download the latest `HiddenStart-0.9.0.dmg` from [GitHub Releases](https://github.com/MZEryani/HiddenStart/releases).
+2. Open the DMG and drag **HiddenStart.app** into your **Applications** folder.
+3. Launch **HiddenStart** from `/Applications`.
+
+> [!NOTE]
+> **First-Launch Gatekeeper Notice**:
+> If macOS displays a notice that the application cannot be checked for malicious software:
+> 1. Open **System Settings \u2192 Privacy & Security**.
+> 2. Scroll to the **Security** section and click **Open Anyway**.
+> 3. Alternatively, remove the quarantine flag in Terminal:
+>    ```bash
+>    xattr -cr /Applications/HiddenStart.app
+>    ```
 
 ---
 

@@ -1,0 +1,5 @@
+# Distribution Architecture and Disk Image Packaging
+
+Distributing a native macOS background utility via GitHub requires balancing developer friction, download size, Gatekeeper quarantine policies, and user onboarding simplicity. Without an Apple Developer ID certificate and automated notarization, macOS Ventura, Sonoma, and Sequoia flag downloaded binaries as quarantined, preventing one-click execution.
+
+We decided to target a native Apple Silicon (`arm64`) slice on macOS 13.0+ to prevent shipping unverified Intel slices while keeping compressed DMG artifacts under 1 MB. For distribution, we adopt an ad-hoc signing baseline with Hardened Runtime enabled, paired with modular Apple Developer ID and `notarytool` hooks that activate automatically when credentials are provided in CI or environment variables. To streamline user onboarding, release artifacts are packaged as compressed read-only Apple Disk Images (`.dmg`) styled with native Finder AppleScript geometry (direct drag-and-drop to `/Applications`), accompanied by a clear first-launch Gatekeeper guidance footnote.

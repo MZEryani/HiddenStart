@@ -44,10 +44,18 @@ public final class StatusItemController: NSObject, NSMenuDelegate {
         if let statusBar = statusBar {
             let item = statusBar.statusItem(withLength: NSStatusItem.variableLength)
             if let button = item.button {
-                button.image = NSImage(
-                    systemSymbolName: "eye.slash",
-                    accessibilityDescription: "HiddenStart"
-                )
+                let iconImage: NSImage
+                if let customIcon = NSImage(named: "MenuBarIcon") {
+                    customIcon.isTemplate = true
+                    customIcon.accessibilityDescription = "HiddenStart"
+                    iconImage = customIcon
+                } else if let symbolIcon = NSImage(systemSymbolName: "eye.slash", accessibilityDescription: "HiddenStart") {
+                    symbolIcon.isTemplate = true
+                    iconImage = symbolIcon
+                } else {
+                    iconImage = NSImage()
+                }
+                button.image = iconImage
                 button.sendAction(on: [.leftMouseUp, .rightMouseUp])
                 button.target = self
                 button.action = #selector(statusItemClicked(_:))
