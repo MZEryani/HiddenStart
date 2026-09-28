@@ -23,8 +23,17 @@ public final class SystemWorkspaceManager: WorkspaceManaging {
 
     @discardableResult
     public func openApplication(at url: URL, configuration: NSWorkspace.OpenConfiguration) async throws -> any RunningAppRepresentable {
-        let app = try await workspace.openApplication(at: url, configuration: configuration)
-        return app
+        try await withCheckedThrowingContinuation { continuation in
+            workspace.openApplication(at: url, configuration: configuration) { app, error in
+                if let error = error {
+                    continuation.resume(throwing: error)
+                } else if let app = app {
+                    continuation.resume(returning: app)
+                } else {
+                    continuation.resume(throwing: NSError(domain: "WorkspaceError", code: -1))
+                }
+            }
+        }
     }
 
     public func icon(forFile fullPath: String) -> NSImage {
