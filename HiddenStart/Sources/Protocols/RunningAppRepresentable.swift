@@ -9,4 +9,8 @@ public protocol RunningAppRepresentable: AnyObject, Sendable {
     @discardableResult func hide() -> Bool
 }
 
-extension NSRunningApplication: RunningAppRepresentable {}
+#if compiler(>=6.0)
+extension NSRunningApplication: @retroactive @unchecked Sendable, RunningAppRepresentable {}
+#else
+extension NSRunningApplication: @unchecked Sendable, RunningAppRepresentable {}
+#endif
