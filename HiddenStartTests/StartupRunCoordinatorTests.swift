@@ -670,8 +670,13 @@ struct StartupRunCoordinatorTests {
         struct TestLaunchError: Error, Equatable {}
         mockSuppressor.shouldThrowError = TestLaunchError()
 
-        await #expect(throws: TestLaunchError.self) {
+        do {
             try await coordinator.launchImmediately(app: app)
+            Issue.record("Expected TestLaunchError was not thrown")
+        } catch is TestLaunchError {
+            // Expected error caught
+        } catch {
+            Issue.record("Unexpected error: \(error)")
         }
     }
 }

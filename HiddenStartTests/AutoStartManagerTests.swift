@@ -97,8 +97,13 @@ struct AutoStartManagerTests {
             registerAction: { throw TestError() }
         )
 
-        #expect(throws: TestError.self) {
+        do {
             try manager.register()
+            Issue.record("Expected TestError was not thrown")
+        } catch is TestError {
+            // Expected error caught
+        } catch {
+            Issue.record("Unexpected error: \(error)")
         }
         #expect(manager.isEnabled == false)
         #expect(manager.isDenied == true)
@@ -114,8 +119,13 @@ struct AutoStartManagerTests {
             unregisterAction: { throw TestError() }
         )
 
-        #expect(throws: TestError.self) {
+        do {
             try manager.unregister()
+            Issue.record("Expected TestError was not thrown")
+        } catch is TestError {
+            // Expected error caught
+        } catch {
+            Issue.record("Unexpected error: \(error)")
         }
         #expect(manager.isEnabled == true)
         #expect(manager.status == .enabled)
