@@ -25,7 +25,7 @@ targets:
         CFBundleName: HiddenStart
         CFBundleDisplayName: HiddenStart
         CFBundleIdentifier: com.mzeryani.HiddenStart
-        CFBundleShortVersionString: "0.9.0"
+        CFBundleShortVersionString: "0.9.1"
         CFBundleVersion: "1"
         CFBundleIconName: AppIcon
         CFBundleIconFile: AppIcon

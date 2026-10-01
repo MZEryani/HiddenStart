@@ -33,4 +33,24 @@ struct WorkspaceManagingTests {
         #expect(mockWorkspace.configurations.first?.arguments == ["--start-minimized", "--multi-instance"])
         #expect(runningApp.processIdentifier == 1234)
     }
+
+    @Test("SystemWorkspaceManager openApplication launches app without actor assertion crash")
+    @MainActor
+    func testSystemWorkspaceManagerLaunch() async throws {
+        let manager = SystemWorkspaceManager()
+        let config = NSWorkspace.OpenConfiguration()
+        config.hides = true
+        config.activates = false
+        let appURL = manager.urlForApplication(withBundleIdentifier: "com.apple.Calculator")
+            ?? URL(fileURLWithPath: "/System/Applications/Calculator.app")
+        guard FileManager.default.fileExists(atPath: appURL.path) else {
+            return
+        }
+        let runningApp = try await manager.openApplication(at: appURL, configuration: config)
+        #expect(runningApp.processIdentifier > 0)
+        // Clean up spawned app
+        (runningApp as? NSRunningApplication)?.terminate()
+    }
 }
+
+

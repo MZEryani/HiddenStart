@@ -6,6 +6,10 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 cd "${PROJECT_ROOT}"
 
+if [ -z "${DEVELOPER_DIR:-}" ] && [ -d "/Applications/Xcode-27.0.0.app" ]; then
+    export DEVELOPER_DIR="/Applications/Xcode-27.0.0.app/Contents/Developer"
+fi
+
 VERSION="${1:-$(/usr/libexec/PlistBuddy -c "Print CFBundleShortVersionString" HiddenStart/Info.plist 2>/dev/null || echo "0.9.0")}"
 DIST_DIR="${PROJECT_ROOT}/dist"
 APP_NAME="HiddenStart"

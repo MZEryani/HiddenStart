@@ -57,7 +57,7 @@ HiddenStart runs quietly in your menu bar, holding back selected applications un
 
 ## Installation
 
-1. Download the latest `HiddenStart-0.9.0.dmg` from [GitHub Releases](https://github.com/MZEryani/HiddenStart/releases).
+1. Download the latest `HiddenStart-0.9.1.dmg` from [GitHub Releases](https://github.com/MZEryani/HiddenStart/releases).
 2. Open the DMG and drag **HiddenStart.app** into your **Applications** folder.
 3. Launch **HiddenStart** from `/Applications`.
 
