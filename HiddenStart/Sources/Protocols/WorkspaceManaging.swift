@@ -1,4 +1,12 @@
-import AppKit
+@preconcurrency import AppKit
+
+#if compiler(>=6.0)
+extension NSWorkspace: @retroactive @unchecked Sendable {}
+extension NSWorkspace.OpenConfiguration: @retroactive @unchecked Sendable {}
+#else
+extension NSWorkspace: @unchecked Sendable {}
+extension NSWorkspace.OpenConfiguration: @unchecked Sendable {}
+#endif
 
 @MainActor
 public protocol WorkspaceManaging: AnyObject, Sendable {
